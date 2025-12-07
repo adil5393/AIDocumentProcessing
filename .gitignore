@@ -1,0 +1,30 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+
+# ---- Virtual Environment ----
+venv/
+env/
+ENV/
+.venv/
+
+# ---- FastAPI / Uvicorn ----
+*.log
+
+# ---- Environment variables ----
+.env
+.env.*
+
+# ---- IDE Files ----
+.vscode/
+.idea/
+
+# ---- OS Files ----
+*.DS_Store
+Thumbs.db
+
+# ---- Build / Dependencies ----
+*.egg-info/
+dist/
+build/
