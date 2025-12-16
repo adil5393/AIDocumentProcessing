@@ -1,5 +1,15 @@
 # --- GLOBAL IGNORE ---
-
+ocrstuff/
+frontend/.next/
+frontend/.next/**
+frontend/node_modules/
+backend/venv/
+*.log
+__pycache__/
+.next/cache/
+.env
+.env.local
+.env.*
 # System files
 .DS_Store
 Thumbs.db

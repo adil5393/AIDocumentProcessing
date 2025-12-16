@@ -1,4 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
+from fastapi import Depends, Header
 from app.services.amtech import test_connection
 from app.services.auth_service import authenticate
 from pydantic import BaseModel
@@ -9,11 +10,22 @@ class LoginRequest(BaseModel):
     username: str
     password: str
 
+
+def require_token(authorization: str = Header(None)):
+    if authorization != "Bearer fake-token-123":
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+@router.get("/me")
+def me(_: str = Depends(require_token)):
+    return {"user": "admin"}
+
 @router.post("/login")
 def login(data: LoginRequest):
-    # Temporary fixed credentials (we'll replace with real auth later)
     if data.username == "admin" and data.password == "admin":
-        return {"token": "fake-token-123"}
+        return {
+            "access_token": "fake-token-123",
+            "token_type": "bearer"
+        }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
 @router.get("/service-token")
