@@ -4,6 +4,9 @@ frontend/.next/
 frontend/.next/**
 frontend/node_modules/
 backend/venv/
+SampleFiles/
+backend/uploads/
+tempCodeRunnerFile.py
 *.log
 __pycache__/
 .next/cache/
