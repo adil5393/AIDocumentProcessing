@@ -14,6 +14,8 @@ TOKEN_VALIDATION_URL = f"{BASE_URL}/userschool/"
 AMTECH_USERNAME = os.getenv("AMTECH_USERNAME")
 AMTECH_PASSWORD = os.getenv("AMTECH_PASSWORD")
 
+print(AMTECH_USERNAME)
+
 
 def save_token(token, expires_in_seconds, user_id):
     expiry = time.time() + expires_in_seconds
