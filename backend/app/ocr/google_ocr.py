@@ -1,11 +1,12 @@
 from google.cloud import documentai_v1 as documentai
 import mimetypes
+from dotenv import load_dotenv
 import os
 
-PROJECT_ID = "united-planet-480406-n0"
-LOCATION = "us"
-PROCESSOR_ID = "fc452ae87f7340b5"   # OCR Processor
-UPLOADS_DIR = "backend/uploads"
+PROJECT_ID = os.getenv("PROJECT_ID")
+LOCATION = os.getenv("LOCATION")
+PROCESSOR_ID = os.getenv("PROCESSOR_ID")
+UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")  # fallback
 
 processor_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/processors/{PROCESSOR_ID}"
 client = documentai.DocumentProcessorServiceClient()
