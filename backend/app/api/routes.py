@@ -5,7 +5,7 @@ from app.services.auth_service import authenticate
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from fastapi import APIRouter
-from app.ocr.pipeline import run
+from app.ocr.run import run
 from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
@@ -24,9 +24,35 @@ def require_token(authorization: str = Header(None)):
     if authorization != "Bearer fake-token-123":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
+
 @router.get("/me")
 def me(_: str = Depends(require_token)):
     return {"user": "admin"}
+
+@router.get("/files")
+def list_files(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    rows = db.execute(text("""
+        SELECT
+            file_id,
+            file_path,
+            ocr_done,
+            extraction_done
+        FROM uploaded_files
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "file_id": r.file_id,
+            "file_path": r.file_path,
+            "ocr_done": r.ocr_done,
+            "extraction_done": r.extraction_done,
+        }
+        for r in rows
+    ]
 
 
 UPLOAD_DIR = "uploads"
@@ -68,6 +94,159 @@ def upload_file(
         "saved_as": filename,
         "content_type": file.content_type,
     }
+
+@router.delete("/files/{file_id}")
+def delete_file(
+    file_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    row = db.execute(text("""
+        SELECT file_path, extraction_done
+        FROM uploaded_files
+        WHERE file_id = :file_id
+    """), {"file_id": file_id}).fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    if row.extraction_done:
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot delete file after extraction"
+        )
+
+    file_path = os.path.join("uploads", row.file_path)
+
+    try:
+        # delete file from disk
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+        # delete DB row
+        db.execute(text("""
+            DELETE FROM uploaded_files
+            WHERE file_id = :file_id
+        """), {"file_id": file_id})
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"status": "deleted"}
+
+@router.get("/admission-forms")
+def list_admission_forms(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    rows = db.execute(text("""
+        SELECT
+            sr,
+            class AS class_name,
+            student_name,
+            gender,
+            date_of_birth,
+            father_name,
+            mother_name,
+            father_occupation,
+            mother_occupation,
+            address,
+            phone1,
+            phone2,
+            aadhaar_number,
+            last_school_attended,
+            created_at
+        FROM admission_forms
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+    {
+        "sr": r.sr,
+        "class": r.class_name,
+        "student_name": r.student_name,
+        "gender": r.gender,
+        "date_of_birth": r.date_of_birth,
+        "father_name": r.father_name,
+        "mother_name": r.mother_name,
+        "father_occupation": r.father_occupation,
+        "mother_occupation": r.mother_occupation,
+        "address": r.address,
+        "phone1": r.phone1,
+        "phone2": r.phone2,
+        "aadhaar_number": r.aadhaar_number,
+        "last_school_attended": r.last_school_attended,
+        "created_at": r.created_at,
+    }
+    for r in rows
+]
+
+@router.get("/aadhaar-documents")
+def list_aadhaar_documents(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            name,
+            date_of_birth,
+            aadhaar_number,
+            relation_type,
+            related_name,
+            created_at
+        FROM aadhaar_documents
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "id": r.doc_id,
+            "name": r.name,
+            "date_of_birth": r.date_of_birth,
+            "aadhaar_number": r.aadhaar_number,
+            "relation_type": r.relation_type,
+            "related_name": r.related_name,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
+
+@router.get("/transfer-certificates")
+def list_transfer_certificates(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            last_class_studied,
+            last_school_name,
+            created_at
+        FROM transfer_certificates
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "id": r.doc_id,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
+            "date_of_birth": r.date_of_birth,
+            "last_class_studied": r.last_class_studied,
+            "last_school_name": r.last_school_name,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
 
 @router.get("/uploads")
 def list_uploads(_: str = Depends(require_token)):

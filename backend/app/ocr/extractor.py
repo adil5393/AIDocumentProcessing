@@ -71,14 +71,19 @@ Fields:
 - name
 - date_of_birth (YYYY-MM-DD)
 - aadhaar_number
+- relation_type        (S/O, D/O, W/O or null)
+- related_name         (name mentioned after relation, or null)
 
 Rules:
 - Aadhaar number must be exactly 12 digits or null
-- Return ONLY valid JSON
-- Do NOT infer relationships
-- Do NOT guess role (student/parent)
-- Return name in English only
-
+- Extract relation_type ONLY if explicitly present in text (S/O, D/O, W/O)
+- Extract related_name ONLY if it appears next to relation_type
+- Do NOT infer or guess relationships
+- Do NOT decide whether Aadhaar belongs to student or parent
+- Do NOT translate names
+- Return names in English only
+- Return null for any field not found
+- Return ONLY valid JSON (no markdown, no explanation)
 
 OCR Text:
 \"\"\"
