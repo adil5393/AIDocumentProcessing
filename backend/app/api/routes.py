@@ -10,6 +10,10 @@ from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.db.database import get_db
+from pydantic import BaseModel
+from sqlalchemy.exc import IntegrityError
+from datetime import datetime, timedelta
+
 import os
 import uuid
 
@@ -18,6 +22,9 @@ router = APIRouter(prefix="/api")
 class LoginRequest(BaseModel):
     username: str
     password: str
+
+class SRDeclareRequest(BaseModel):
+    sr_number: str
 
 
 def require_token(authorization: str = Header(None)):
@@ -55,6 +62,112 @@ def list_files(
     ]
 
 
+@router.get("/reserved")
+async def get_reserved_srs(
+    db: Session = Depends(get_db)
+):
+    rows = db.execute(text("""
+        SELECT
+            sr_number,
+            branch_id,
+            reserved_by,
+            expires_at
+        FROM sr_registry
+        WHERE status = 'reserved'
+        
+        ORDER BY expires_at
+    """)).fetchall()
+
+    return [
+        {
+            "sr_number": r.sr_number,
+            "branch_id": r.branch_id,
+            "reserved_by": r.reserved_by,
+            "expires_at": r.expires_at
+        }
+        for r in rows
+    ]
+
+@router.post("/declare")
+def declare_sr(
+    payload: SRDeclareRequest,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    sr = payload.sr_number.strip().upper()
+
+    try:
+        db.execute(
+            text("""
+                INSERT INTO sr_registry (
+                    sr_number,
+                    branch_id,
+                    reserved_by,
+                    status
+                )
+                VALUES (
+                    :sr_number,
+                    :branch_id,
+                    :reserved_by,
+                    'reserved'
+                )
+            """),
+            {
+                "sr_number": sr,
+                # TODO: replace these with real values when auth is ready
+                "branch_id": 1,
+                "reserved_by": 1
+            }
+        )
+
+        db.commit()
+
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail=f"SR {sr} is already reserved or confirmed"
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+    return {
+        "message": f"SR {sr} reserved successfully",
+        "sr_number": sr
+    }
+@router.delete("/cleanup")
+def cleanup_expired_srs(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    try:
+        result = db.execute(
+            text("""
+                DELETE FROM sr_registry
+                WHERE status = 'reserved'
+                AND expires_at < now()
+            """)
+        )
+
+        db.commit()
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
+
+    return {
+        "message": "Expired SRs cleaned up",
+        "deleted_count": result.rowcount
+    }
+    
 UPLOAD_DIR = "uploads"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)

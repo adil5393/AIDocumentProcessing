@@ -4,113 +4,13 @@ from .google_ocr import process_file
 from .extractor import extract_fields
 from .doc_classifier import detect_document_type
 from .gpt_doc_classifier import gpt_detect_document_type
+from app.db.insert_admission_form import insert_admission_form
+from app.db.insert_aadhaar import insert_aadhaar
+from app.db.insert_transfer_certificate import insert_transfer_certificate
 import os
 import json
 
 UPLOAD_DIR = "uploads"
-
-def insert_admission_form(db, data):
-    db.execute(text("""
-        INSERT INTO admission_forms (
-            sr,
-            class,
-            student_name,
-            gender,
-            date_of_birth,
-            father_name,
-            mother_name,
-            father_occupation,
-            mother_occupation,
-            address,
-            phone1,
-            phone2,
-            aadhaar_number,
-            last_school_attended
-        )
-        VALUES (
-            :sr,
-            :class,
-            :student_name,
-            :gender,
-            :date_of_birth,
-            :father_name,
-            :mother_name,
-            :father_occupation,
-            :mother_occupation,
-            :address,
-            :phone1,
-            :phone2,
-            :aadhaar_number,
-            :last_school_attended
-        )
-    """), {
-        "sr": data.get("sr"),
-        "class": data.get("class"),
-        "student_name": data.get("student_name"),
-        "gender": data.get("gender"),
-        "date_of_birth": data.get("date_of_birth"),
-        "father_name": data.get("father_name"),
-        "mother_name": data.get("mother_name"),
-        "father_occupation": data.get("father_occupation"),
-        "mother_occupation": data.get("mother_occupation"),
-        "address": data.get("address"),
-        "phone1": data.get("phone1"),
-        "phone2": data.get("phone2"),
-        "aadhaar_number": data.get("aadhaar_number"),
-        "last_school_attended": data.get("last_school_attended"),
-    })
-    
-def insert_aadhaar(db, data: dict):
-    db.execute(text("""
-        INSERT INTO aadhaar_documents (
-            name,
-            date_of_birth,
-            aadhaar_number,
-            relation_type,
-            related_name
-        )
-        VALUES (
-            :name,
-            :date_of_birth,
-            :aadhaar_number,
-            :relation_type,
-            :related_name
-        )
-    """), {
-        "name": data.get("name"),
-        "date_of_birth": data.get("date_of_birth"),
-        "aadhaar_number": data.get("aadhaar_number"),
-        "relation_type": data.get("relation_type"),
-        "related_name": data.get("related_name"),
-    })
-
-def insert_transfer_certificate(db, data: dict):
-    db.execute(text("""
-        INSERT INTO transfer_certificates (
-            student_name,
-            father_name,
-            mother_name,
-            date_of_birth,
-            last_class_studied,
-            last_school_name
-        )
-        VALUES (
-            :student_name,
-            :father_name,
-            :mother_name,
-            :date_of_birth,
-            :last_class_studied,
-            :last_school_name
-        )
-    """), {
-        "student_name": data.get("student_name"),
-        "father_name": data.get("father_name"),
-        "mother_name": data.get("mother_name"),
-        "date_of_birth": data.get("date_of_birth"),
-        "last_class_studied": data.get("last_class_studied"),
-        "last_school_name": data.get("last_school_name")
-    })
-
 
 def run():
     db = SessionLocal()

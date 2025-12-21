@@ -44,17 +44,21 @@ Fields:
 - father_name
 - mother_name
 - father_occupation
+- father aadhaar
 - mother_occupation
+- mother aadhaar
+- spen number
 - address
 - phone1
 - phone2
-- aadhaar_number
+- student_aadhaar_number
 - last_school_attended
 
 Rules:
 - Return ONLY valid JSON
 - If a field is missing, use null
 - Phone numbers digits only or null
+- use spen and pen number interchangibly
 
 OCR Text:
 \"\"\"
