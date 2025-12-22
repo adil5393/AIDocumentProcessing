@@ -7,9 +7,9 @@ from .gpt_doc_classifier import gpt_detect_document_type
 from app.db.insert_admission_form import insert_admission_form
 from app.db.insert_aadhaar import insert_aadhaar
 from app.db.insert_transfer_certificate import insert_transfer_certificate
+from app.db.aadhaarlookup import run_aadhaar_lookup
 import os
 import json
-
 UPLOAD_DIR = "uploads"
 
 def run():
@@ -74,11 +74,15 @@ def run():
 
             try:
                 if doc_type == "admission_form":
+                    print(doc_type)
                     insert_admission_form(db, structured)
+                    print(doc_type)
                 elif doc_type == "aadhaar":
-                    insert_aadhaar(db, structured)
+                    doc_id = insert_aadhaar(db,file_id, structured)
+                    if structured.get("aadhaar_number"):
+                        run_aadhaar_lookup(db, doc_id)
                 elif doc_type == "transfer_certificate":
-                    insert_transfer_certificate(db, structured)
+                    insert_transfer_certificate(db,file_id, structured)
 
                 db.execute(text("""
                     UPDATE uploaded_files
@@ -100,7 +104,6 @@ def run():
 
     finally:
         db.close()
-        
         
 if __name__ == "__main__":
     run()
