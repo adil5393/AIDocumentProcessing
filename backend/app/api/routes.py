@@ -13,6 +13,7 @@ from app.db.database import get_db
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
+from app.db.aadhaarlookup import run_aadhaar_lookup
 
 import os
 import uuid
@@ -45,6 +46,7 @@ def list_files(
         SELECT
             file_id,
             file_path,
+            doc_type,
             ocr_done,
             extraction_done
         FROM uploaded_files
@@ -55,6 +57,7 @@ def list_files(
         {
             "file_id": r.file_id,
             "file_path": r.file_path,
+            "doc_type": r.doc_type,
             "ocr_done": r.ocr_done,
             "extraction_done": r.extraction_done,
         }
@@ -167,7 +170,62 @@ def cleanup_expired_srs(
         "message": "Expired SRs cleaned up",
         "deleted_count": result.rowcount
     }
+@router.post("/aadhaar/{doc_id}/lookup")
+def aadhaar_lookup(
     
+    doc_id: int,
+    force: bool = False,   # 👈 important
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    row = db.execute(
+        text("""
+            SELECT lookup_status
+            FROM aadhaar_documents
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Aadhaar document not found")
+
+    if row.lookup_status != "pending" and not force:
+        return {
+            "status": row.lookup_status,
+            "message": "Lookup already completed. Use force=true to re-run."
+        }
+
+    result = run_aadhaar_lookup(db, doc_id)
+    return result
+
+@router.post("/aadhaar/lookup/pending")
+def run_pending_aadhaar_lookups(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    
+    rows = db.execute(
+        text("""
+    SELECT doc_id
+    FROM aadhaar_documents
+    
+""")
+    ).fetchall()
+    processed = 0
+    for r in rows:
+        try:
+            run_aadhaar_lookup(db, r.doc_id)
+            processed += 1
+        except Exception as e:
+            # do NOT crash whole batch
+            print (e)
+            continue
+
+    return {
+        "message": "Pending Aadhaar lookups processed",
+        "processed_count": processed
+    }   
 UPLOAD_DIR = "uploads"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -223,11 +281,11 @@ def delete_file(
     if not row:
         raise HTTPException(status_code=404, detail="File not found")
 
-    if row.extraction_done:
-        raise HTTPException(
-            status_code=400,
-            detail="Cannot delete file after extraction"
-        )
+    # if row.extraction_done:
+    #     raise HTTPException(
+    #         status_code=400,
+    #         detail="Cannot delete file after extraction"
+    #     )
 
     file_path = os.path.join("uploads", row.file_path)
 
@@ -269,7 +327,7 @@ def list_admission_forms(
             address,
             phone1,
             phone2,
-            aadhaar_number,
+            student_aadhaar_number,
             last_school_attended,
             created_at
         FROM admission_forms
@@ -290,7 +348,7 @@ def list_admission_forms(
         "address": r.address,
         "phone1": r.phone1,
         "phone2": r.phone2,
-        "aadhaar_number": r.aadhaar_number,
+        "aadhaar_number": r.student_aadhaar_number,
         "last_school_attended": r.last_school_attended,
         "created_at": r.created_at,
     }
@@ -310,6 +368,8 @@ def list_aadhaar_documents(
             aadhaar_number,
             relation_type,
             related_name,
+            lookup_status,
+            lookup_checked_at,
             created_at
         FROM aadhaar_documents
         ORDER BY created_at DESC
@@ -317,12 +377,14 @@ def list_aadhaar_documents(
 
     return [
         {
-            "id": r.doc_id,
+            "doc_id": r.doc_id,
             "name": r.name,
             "date_of_birth": r.date_of_birth,
             "aadhaar_number": r.aadhaar_number,
             "relation_type": r.relation_type,
             "related_name": r.related_name,
+            "lookup_status": r.lookup_status,
+            "lookup_checked_at":r.lookup_checked_at,
             "created_at": r.created_at,
         }
         for r in rows

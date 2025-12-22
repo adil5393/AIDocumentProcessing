@@ -125,7 +125,7 @@ def insert_admission_form(db, data):
                     address,
                     phone1,
                     phone2,
-                    aadhaar_number,
+                    student_aadhaar_number,
                     last_school_attended
                 )
                 VALUES (
@@ -141,7 +141,7 @@ def insert_admission_form(db, data):
                     :address,
                     :phone1,
                     :phone2,
-                    :aadhaar_number,
+                    :student_aadhaar_number,
                     :last_school_attended
                 )
             """), {

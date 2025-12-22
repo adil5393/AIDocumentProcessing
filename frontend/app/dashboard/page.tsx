@@ -10,6 +10,7 @@ import TransferCerts from "./TransferCerts";
 type FileRow = {
   file_id: number;
   file_path: string;
+  doc_type: string;
   ocr_done: boolean;
   extraction_done: boolean;
 };
@@ -113,6 +114,7 @@ export default function Dashboard() {
             <thead>
               <tr>
                 <th>File</th>
+                <th>Doc Type</th>
                 <th>OCR</th>
                 <th>Extraction</th>
               </tr>
@@ -121,10 +123,11 @@ export default function Dashboard() {
               {files.map((f) => (
                 <tr key={f.file_id}>
                   <td>{f.file_path}</td>
+                  <td>{f.doc_type}</td>
                   <td>{f.ocr_done ? "✓" : "⏳"}</td>
                   <td>{f.extraction_done ? "✓" : "⛔"}</td>
                   <td>
-                    {!f.extraction_done && (
+                    {(
                       <button
                         onClick={async () => {
                           if (!confirm("Delete this file?")) return;
