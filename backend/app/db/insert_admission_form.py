@@ -76,11 +76,11 @@ def insert_admission_form(db,file_id, data):
                     :date_of_birth,
                     :spen
                     :father_name,
-                    :father_aadhaar,
                     :mother_name,
-                    :mother_aadhaar,
                     :father_occupation,
+                    :father_aadhaar,
                     :mother_occupation,
+                    :mother_aadhaar,
                     :address,
                     :phone1,
                     :phone2,

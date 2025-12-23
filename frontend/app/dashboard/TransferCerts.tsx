@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
+import React from "react";
+import TransferCertificateCandidates from "./TransferCertificateCandidates";
 
 type TCRow = {
-  id?: number;
+  doc_id: number;          // ✅ important
   student_name: string;
   father_name: string | null;
   mother_name: string | null;
@@ -14,21 +16,34 @@ type TCRow = {
   last_school_name: string | null;
 };
 
+
 export default function TransferCerts() {
   const [rows, setRows] = useState<TCRow[]>([]);
-
+  const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   useEffect(() => {
     apiFetch("http://localhost:8000/api/transfer-certificates")
       .then(res => res.json())
       .then(setRows);
   }, []);
+    async function rerunLookup(docId: number) {
+    if (!confirm("Re-run lookup for this Transfer Certificate?")) return;
+
+    await apiFetch(
+      `http://localhost:8000/api/tc/${docId}/lookup?force=true`,
+      { method: "POST" }
+    );
+
+    // refresh list
+    const res = await apiFetch("http://localhost:8000/api/transfer-certificates");
+    setRows(await res.json());
+  }
 
   return (
     <>
       <h3>Transfer Certificates</h3>
 
       <div style={{ overflowX: "auto" }}>
-        <table border={1} cellPadding={6} width="100%">
+        <table className="table">
           <thead>
             <tr>
               <th>Student Name</th>
@@ -38,21 +53,54 @@ export default function TransferCerts() {
               <th>Lookup Status</th>
               <th>Last Class</th>
               <th>Last School</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {rows.map((r, idx) => (
-              <tr key={idx}>
-                <td>{r.student_name}</td>
-                <td>{r.father_name || "-"}</td>
-                <td>{r.mother_name || "-"}</td>
-                <td>{r.date_of_birth || "-"}</td>
-                <td>{r.lookup_status || "-"}</td>
-                <td>{r.last_class_studied || "-"}</td>
-                <td>{r.last_school_name || "-"}</td>
-              </tr>
+            {rows.map((r) => (
+              <React.Fragment key={r.doc_id}>
+                <tr key={`${r.doc_id}-row`}>
+                  <td>{r.student_name}</td>
+                  <td>{r.father_name || "-"}</td>
+                  <td>{r.mother_name || "-"}</td>
+                  <td>{r.date_of_birth || "-"}</td>
+                  <td>{r.lookup_status || "-"}</td>
+                  <td>{r.last_class_studied || "-"}</td>
+                  <td>{r.last_school_name || "-"}</td>
+                  <td>
+                    <button
+                      className="btn"
+                      onClick={() =>
+                        setExpandedDocId(
+                          expandedDocId === r.doc_id ? null : r.doc_id
+                        )
+                      }
+                    >
+                      {expandedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
+                    </button>
+
+                    <button
+                      className="btn"
+                      style={{ marginLeft: 6 }}
+                      onClick={() => rerunLookup(r.doc_id)}
+                    >
+                      🔄 Re-run
+                    </button>
+                  </td>
+                </tr>
+
+                {expandedDocId === r.doc_id && (
+                  <tr key={`${r.doc_id}-candidates`}>
+                    <td colSpan={8} className="expanded-row">
+                      <TransferCertificateCandidates docId={r.doc_id} />
+                    </td>
+                  </tr>
+                )}
+              </React.Fragment>
             ))}
           </tbody>
+
+
         </table>
       </div>
     </>

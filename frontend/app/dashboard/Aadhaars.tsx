@@ -1,7 +1,9 @@
 "use client";
 
+import AadhaarLookupCandidates from "./AadhaarCandidates";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
+import React from "react";
 
 type AadhaarRow = {
   doc_id: number;
@@ -13,10 +15,14 @@ type AadhaarRow = {
   lookup_status: "pending" | "single_match" | "multiple_match" | "no_match" | "error";
   lookup_checked_at: string | null;
 };
+type Props = {
+  selectedDocId: number | null;
+  onSelectDoc: (docId: number) => void;
+};
 
-
-export default function Aadhaars() {
+export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
   const [rows, setRows] = useState<AadhaarRow[]>([]);
+  
 
   function fetchAadhaarDocuments() {
     apiFetch("http://localhost:8000/api/aadhaar-documents")
@@ -53,7 +59,7 @@ async function runPendingLookups() {
       <h3>Aadhaar Documents</h3>
 
       <div style={{ overflowX: "auto" }}>
-        <table border={1} cellPadding={6} width="100%">
+        <table className="table">
           <thead>
             <tr>
               <th>Name</th>
@@ -64,47 +70,66 @@ async function runPendingLookups() {
               <th>Lookup Status</th>
               <th>Checked At</th>
               <th>Action</th>
+              
             </tr>
           </thead>
 
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.doc_id}>
-                <td>{r.name}</td>
-                <td>{r.date_of_birth || "-"}</td>
-                <td>{r.aadhaar_number || "-"}</td>
-                <td>{r.relation_type || "-"}</td>
-                <td>{r.related_name || "-"}</td>
+         <tbody>
+  {rows.map(r => (
+        <React.Fragment key={r.doc_id}>
+          <tr>
+            <td>{r.name}</td>
+            <td>{r.date_of_birth || "-"}</td>
+            <td>{r.aadhaar_number || "-"}</td>
+            <td>{r.relation_type || "-"}</td>
+            <td>{r.related_name || "-"}</td>
 
-                <td>
-                  {r.lookup_status === "pending" && "⏳ Pending"}
-                  {r.lookup_status === "single_match" && "✅ Single Match"}
-                  {r.lookup_status === "multiple_match" && "⚠️ Multiple Matches"}
-                  {r.lookup_status === "no_match" && "❓ No Match"}
-                  {r.lookup_status === "error" && "❌ Error"}
-                </td>
+            <td>
+              {r.lookup_status === "pending" && "⏳ Pending"}
+              {r.lookup_status === "single_match" && "✅ Single Match"}
+              {r.lookup_status === "multiple_match" && "⚠️ Multiple Matches"}
+              {r.lookup_status === "no_match" && "❓ No Match"}
+              {r.lookup_status === "error" && "❌ Error"}
+            </td>
 
-                <td>
-                  {r.lookup_checked_at
-                    ? new Date(r.lookup_checked_at).toLocaleString()
-                    : "-"}
-                </td>
+            <td>
+              {r.lookup_checked_at
+                ? new Date(r.lookup_checked_at).toLocaleString()
+                : "-"}
+            </td>
 
-                <td>
-                  {r.lookup_status !== "pending" && (
-                    <button
-                      onClick={() => rerunLookup(r.doc_id)}
-                      style={{ fontSize: 12 }}
-                    >
-                      Re-run Lookup
-                    </button>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
+            <td>
+              <button className="btn"
+                onClick={() => onSelectDoc(r.doc_id)}
+                style={{ fontSize: 12 }}
+              >
+                {selectedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
+              </button>
+
+              {r.lookup_status !== "pending" && (
+                <button className="btn"
+                  onClick={() => rerunLookup(r.doc_id)}
+                  style={{ fontSize: 12, marginLeft: 6 }}
+                >
+                  Re-run Lookup
+                </button>
+              )}
+            </td>
+          </tr>
+
+          {selectedDocId === r.doc_id && (
+            <tr>
+              <td colSpan={8} style={{ background: "#fafafa" }}>
+                <AadhaarLookupCandidates docId={r.doc_id} />
+              </td>
+            </tr>
+          )}
+        </React.Fragment>
+      ))}
+    </tbody>
+
         </table>
-          <button
+          <button className="btn"
             onClick={runPendingLookups}
             style={{ marginBottom: 10 }}
           >

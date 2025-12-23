@@ -14,7 +14,8 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from app.db.aadhaar_lookup import run_aadhaar_lookup
-import threading
+
+import threading, json
 
 import os
 import uuid
@@ -212,7 +213,7 @@ def run_pending_aadhaar_lookups(
         text("""
     SELECT doc_id
     FROM aadhaar_documents
-    
+    where lookup_status not in ('single match')
 """)
     ).fetchall()
     processed = 0
@@ -415,7 +416,7 @@ def list_transfer_certificates(
 
     return [
         {
-            "id": r.doc_id,
+            "doc_id": r.doc_id,
             "student_name": r.student_name,
             "father_name": r.father_name,
             "mother_name": r.mother_name,
@@ -454,6 +455,116 @@ def get_uploaded_file(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(file_path)
+
+@router.get("/aadhaar/{doc_id}/candidates")
+def get_aadhaar_candidates(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    try:
+        rows = db.execute(
+            text("""
+                SELECT
+                    sr,
+                    role,
+                    student_name,
+                    total_score,
+                    signals
+                FROM aadhaar_lookup_candidates
+                WHERE doc_id = :d
+                ORDER BY total_score DESC
+            """),
+            {"d": doc_id}
+        ).fetchall()
+
+        return [
+            {
+                "sr": r.sr,
+                "role": r.role,
+                "student_name":r.student_name,
+                "total_score": float(r.total_score),
+                "signals": r.signals if isinstance(r.signals, dict)
+                           else json.loads(r.signals)
+            }
+            for r in rows
+        ]
+
+    finally:
+        db.close()
+
+@router.get("/tc/{doc_id}/candidates")
+def get_tc_candidates(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                sr,
+                total_score,
+                signals
+            FROM transfer_certificate_candidates
+            WHERE doc_id = :d
+            ORDER BY total_score DESC
+        """),
+        {"d": doc_id}
+    ).fetchall()
+
+    return [
+        {
+            "sr": r.sr,
+            "total_score": float(r.total_score),
+            "signals": r.signals if isinstance(r.signals, dict)
+                       else json.loads(r.signals)
+        }
+        for r in rows
+    ]
+
+@router.post("/tc/{doc_id}/lookup")
+def rerun_tc_lookup(
+    doc_id: int,
+    force: bool = True,
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    from app.db.transfer_certificate_lookup import run_tc_lookup
+
+    if force:
+        db.execute(
+            text("""
+                UPDATE transfer_certificates
+                SET lookup_status = 'pending',
+                    lookup_checked_at = NULL
+                WHERE doc_id = :d
+            """),
+            {"d": doc_id}
+        )
+        db.commit()
+
+    run_tc_lookup(db, doc_id)
+    return {"status": "ok"}
+
+@router.post("/tc/lookup/pending")
+def run_pending_tc_lookups(
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    from app.db.transfer_certificate_lookup import run_tc_lookup
+
+    rows = db.execute(
+        text("""
+            SELECT doc_id
+            FROM transfer_certificates
+            WHERE lookup_status IS DISTINCT FROM 'single_match'
+        """)
+    ).fetchall()
+
+    for r in rows:
+        run_tc_lookup(db, r.doc_id)
+
+    return {"processed_count": len(rows)}
 
 @router.post("/login")
 def login(data: LoginRequest):

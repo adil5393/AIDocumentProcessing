@@ -3,7 +3,7 @@ import re
 from sqlalchemy import text
 from app.helper.matching import normalize_name,name_similarity,calculate_age
 
-def build_candidate(sr, role, signals):
+def build_candidate(sr, role, student_name, signals):
     score = 0.0
 
     score += 1.0 if signals.get("aadhaar_exact") else 0.0
@@ -16,6 +16,7 @@ def build_candidate(sr, role, signals):
     return {
         "sr": sr,
         "role": role,
+        "student_name": student_name,
         "total_score": round(score, 3),
         "signals": signals
     }
@@ -59,6 +60,7 @@ def run_aadhaar_lookup(db, doc_id: int):
         rows = db.execute(
             text("""
                 SELECT sr,
+                student_name,
                        CASE
                          WHEN student_aadhaar_number = :a THEN 'student'
                          WHEN father_aadhaar = :a THEN 'father'
@@ -76,6 +78,7 @@ def run_aadhaar_lookup(db, doc_id: int):
             candidates[(r.sr, r.role)] = build_candidate(
                 r.sr,
                 r.role,
+                r.student_name,
                 {"aadhaar_exact": True}
             )
 
@@ -92,7 +95,7 @@ def run_aadhaar_lookup(db, doc_id: int):
 
         for r in rows:
             sr = r.sr
-
+            student_name = r.student_name
             student_tokens = normalize_name(r.student_name)
             father_tokens = normalize_name(r.father_name)
             mother_tokens = normalize_name(r.mother_name)
@@ -108,7 +111,7 @@ def run_aadhaar_lookup(db, doc_id: int):
                     "student_name_score": name_similarity(aadhaar_tokens, student_tokens),
                     "related_name_score": name_similarity(related_tokens, father_tokens),
                 }
-                candidates[(sr, "student")] = build_candidate(sr, "student", signals)
+                candidates[(sr, "student")] = build_candidate(sr, "student",student_name, signals)
 
             # ---- FATHER ----
             if aadhaar_age is None or aadhaar_age >= 18:
@@ -116,7 +119,7 @@ def run_aadhaar_lookup(db, doc_id: int):
                     "age_match": aadhaar_age is not None and aadhaar_age >= 18,
                     "parent_name_score": name_similarity(aadhaar_tokens, father_tokens),
                 }
-                candidates[(sr, "father")] = build_candidate(sr, "father", signals)
+                candidates[(sr, "father")] = build_candidate(sr, "father",student_name, signals)
 
             # ---- MOTHER ----
             if aadhaar_age is None or aadhaar_age >= 18:
@@ -125,7 +128,7 @@ def run_aadhaar_lookup(db, doc_id: int):
                     "age_match": aadhaar_age is not None and aadhaar_age >= 18,
                     "parent_name_score": name_similarity(aadhaar_tokens, mother_tokens),
                 }
-                candidates[(sr, "mother")] = build_candidate(sr, "mother", signals)
+                candidates[(sr, "mother")] = build_candidate(sr, "mother",student_name, signals)
 
     # -------------------------
     # INSERT
@@ -137,21 +140,22 @@ def run_aadhaar_lookup(db, doc_id: int):
     else:
         status = "multiple_match"
     for c in candidates.values():
-        db.execute(
-            text("""
-                INSERT INTO aadhaar_lookup_candidates
-                (doc_id, sr, role, total_score, signals)
-                VALUES (:d, :s, :r, :t, :sig)
-                ON CONFLICT DO NOTHING
-            """),
-            {
-                "d": doc_id,
-                "s": c["sr"],
-                "r": c["role"],
-                "t": c["total_score"],
-                "sig": json.dumps(c["signals"])
-            }
-        )
+       db.execute(
+        text("""
+            INSERT INTO aadhaar_lookup_candidates
+            (doc_id, sr, role, student_name, total_score, signals)
+            VALUES (:d, :s, :r, :sn, :t, :sig)
+            ON CONFLICT DO NOTHING
+        """),
+        {
+            "d": doc_id,
+            "s": c["sr"],
+            "r": c["role"],
+            "sn": c["student_name"],   # ✅ THIS WAS MISSING
+            "t": c["total_score"],
+            "sig": json.dumps(c["signals"])
+        }
+    )
 
     db.execute(
         text("""

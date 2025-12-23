@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 
+
 export default function AdmissionForms() {
   /* ------------------ STATE ------------------ */
   const [rows, setRows] = useState<any[]>([]);
@@ -157,7 +158,7 @@ export default function AdmissionForms() {
         <div style={{ width: "75%" }}>
           <h4>Admission Forms</h4>
 
-          <table border={1} cellPadding={6} width="100%">
+          <table className="table">
             <thead>
               <tr>
                 <th>SR</th>

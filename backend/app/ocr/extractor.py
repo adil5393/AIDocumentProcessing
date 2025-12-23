@@ -33,40 +33,64 @@ def call_gpt(prompt: str) -> dict:
 
 def extract_admission_form(text: str) -> dict:
     prompt = f"""
-Extract fields from a SCHOOL ADMISSION FORM.
+You are extracting structured data from a SCHOOL ADMISSION FORM.
 
-Fields:
-- sr
-- class
-- student_name
-- gender
-- date_of_birth (YYYY-MM-DD)
-- father_name
-- mother_name
-- father_occupation
-- father aadhaar
-- mother_occupation
-- mother aadhaar
-- spen number
-- address
-- phone1
-- phone2
-- student_aadhaar_number
-- last_school_attended
+You MUST follow the schema and rules exactly.
 
-Rules:
-- Return ONLY valid JSON
-- If a field is missing, use null
-- Phone numbers digits only or null
-- use spen and pen number interchangibly
-- Use integers wrapped as strings instead of roman numbers
+====================
+OUTPUT SCHEMA (JSON)
+====================
 
-OCR Text:
+{{
+  "sr": string | null,
+  "class": string | null,
+  "student_name": string | null,
+  "gender": "Male" | "Female" | null,
+  "date_of_birth": "YYYY-MM-DD" | null,
+  "father_name": string | null,
+  "mother_name": string | null,
+  "mother_occupation": string | null,
+  "father_occupation": string | null,
+  "father_aadhaar": string | null,
+  "mother_aadhaar": string | null,
+  "student_aadhaar_number": string | null,
+  "spen_number": string | null,
+  "address": string | null,
+  "phone1": string | null,
+  "phone2": string | null,
+  "last_school_attended": string | null
+}}
+
+====================
+HARD RULES (MANDATORY)
+====================
+
+1. Return ONLY valid JSON. No text outside JSON.
+3. Aadhaar numbers:
+   - Must be EXACTLY 12 digits
+   - Must appear near keywords like "Aadhaar", "UID", "UIDAI"
+   - MUST NOT be phone numbers
+4. Phone numbers:
+   - Must be EXACTLY 10 digits
+   - Must appear near keywords like "Mobile", "Phone", "Contact","E-Mail".
+   - MUST NOT be copied into Aadhaar fields
+5. If a 10-digit number is found, DO NOT place it in any Aadhaar field.
+6. If a 12-digit number is found near "Mobile" or "Phone", IGNORE it.
+8. Use "spen_number" for SPEN / PEN interchangeably.
+9. Use Arabic numerals only (Always convert Roman numerals).
+NOTE:
+Aadhaar numbers may be written with spaces or separators near "Aadhaar No. (Not mandatory) (Attach proof)" (e.g. 1234 5678 9012, 1.2.34.567.8 9 0.12).
+Normalize them to a 12-digit string WITHOUT spaces.
+
+====================
+OCR TEXT
+====================
 \"\"\"
 {text}
 \"\"\"
 """
     return call_gpt(prompt)
+
 
 def extract_aadhaar(text: str) -> dict:
     prompt = f"""

@@ -1,0 +1,109 @@
+/* ===== Global Dark Theme ===== */
+
+.dashboard {
+  background: #0f1115;
+  min-height: 100vh;
+  color: #e6e6e6;
+  padding: 20px;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* ===== Tables ===== */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #151821;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table th {
+  background: #1c2030;
+  color: #cfd3ff;
+  padding: 8px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.table td {
+  padding: 8px;
+  border-bottom: 1px solid #22263a;
+}
+
+.table tr:hover {
+  background: #1a1f33;
+}
+
+/* ===== Expanded rows ===== */
+
+.expanded-row {
+  background: #10131d;
+  border-top: 1px solid #2a2f45;
+}
+
+/* ===== Buttons ===== */
+
+.btn {
+  background: #1f2336;
+  color: #cfd3ff;
+  border: 1px solid #2a2f45;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: #2a2f45;
+}
+
+/* ===== Status badges ===== */
+
+.status-pending {
+  color: #f1c40f;
+}
+
+.status-single {
+  color: #2ecc71;
+}
+
+.status-multiple {
+  color: #f39c12;
+}
+
+.status-none {
+  color: #95a5a6;
+}
+
+.status-error {
+  color: #e74c3c;
+}
+
+/* ===== Signal badges ===== */
+
+.signal-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  margin-right: 6px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  background: #1c2030;
+}
+
+.signal-strong {
+  border: 1px solid #2ecc71;
+  color: #2ecc71;
+}
+
+.signal-medium {
+  border: 1px solid #f1c40f;
+  color: #f1c40f;
+}
+
+.signal-weak {
+  border: 1px solid #e74c3c;
+  color: #e74c3c;
+}
