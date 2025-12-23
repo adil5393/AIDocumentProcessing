@@ -59,6 +59,7 @@ Rules:
 - If a field is missing, use null
 - Phone numbers digits only or null
 - use spen and pen number interchangibly
+- Use integers wrapped as strings instead of roman numbers
 
 OCR Text:
 \"\"\"
@@ -113,6 +114,7 @@ Rules:
 - If missing, use null
 - Return Name only in English
 - Use Indian Naming Convention
+- Use integers wrapped as strings instead of roman numbers
 
 OCR Text:
 \"\"\"

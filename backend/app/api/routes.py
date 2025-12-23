@@ -13,7 +13,8 @@ from app.db.database import get_db
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
-from app.db.aadhaarlookup import run_aadhaar_lookup
+from app.db.aadhaar_lookup import run_aadhaar_lookup
+import threading
 
 import os
 import uuid
@@ -48,7 +49,8 @@ def list_files(
             file_path,
             doc_type,
             ocr_done,
-            extraction_done
+            extraction_done,
+            display_name
         FROM uploaded_files
         ORDER BY created_at DESC
     """)).fetchall()
@@ -60,6 +62,7 @@ def list_files(
             "doc_type": r.doc_type,
             "ocr_done": r.ocr_done,
             "extraction_done": r.extraction_done,
+            "display_name":r.display_name
         }
         for r in rows
     ]
@@ -231,9 +234,9 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/ocr/run")
-def run_ocr():
-    processed = run()
-    return {"processed_files": processed}
+def run_pipeline():
+    threading.Thread(target=run, daemon=True).start()
+    return {"status": "started"}
 
 @router.post("/upload")
 def upload_file(
@@ -402,6 +405,7 @@ def list_transfer_certificates(
             father_name,
             mother_name,
             date_of_birth,
+            lookup_status,
             last_class_studied,
             last_school_name,
             created_at
@@ -416,6 +420,7 @@ def list_transfer_certificates(
             "father_name": r.father_name,
             "mother_name": r.mother_name,
             "date_of_birth": r.date_of_birth,
+            "lookup_status":r.lookup_status,
             "last_class_studied": r.last_class_studied,
             "last_school_name": r.last_school_name,
             "created_at": r.created_at,

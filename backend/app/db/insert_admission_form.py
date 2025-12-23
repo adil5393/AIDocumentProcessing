@@ -2,7 +2,7 @@ from sqlalchemy import text
 from fastapi import HTTPException
 
 
-def insert_admission_form(db, data):
+def insert_admission_form(db,file_id, data):
     sr = data.get("sr")
     if not sr:
         raise HTTPException(status_code=400, detail="SR missing in extracted data")
@@ -65,7 +65,8 @@ def insert_admission_form(db, data):
                     phone1,
                     phone2,
                     student_aadhaar_number,
-                    last_school_attended
+                    last_school_attended,
+                    file_id
                 )
                 VALUES (
                     :sr,
@@ -85,10 +86,12 @@ def insert_admission_form(db, data):
                     :phone2,
                     :student_aadhaar_number,
                     :last_school_attended
+                    :file_id
                 )
             """), {
                 **data,
-                "sr": sr
+                "sr": sr,
+                "file_id":file_id
             })
 
             # Confirm SR
@@ -126,7 +129,8 @@ def insert_admission_form(db, data):
                     phone1,
                     phone2,
                     student_aadhaar_number,
-                    last_school_attended
+                    last_school_attended,
+                    file_id
                 )
                 VALUES (
                     :sr,
@@ -142,11 +146,13 @@ def insert_admission_form(db, data):
                     :phone1,
                     :phone2,
                     :student_aadhaar_number,
-                    :last_school_attended
+                    :last_school_attended,
+                    :file_id
                 )
             """), {
                 **data,
-                "sr": sr
+                "sr": sr,
+                "file_id":file_id
             })
 
         else:

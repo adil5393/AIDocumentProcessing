@@ -10,17 +10,22 @@ import TransferCerts from "./TransferCerts";
 type FileRow = {
   file_id: number;
   file_path: string;
+  display_name: string;
   doc_type: string;
   ocr_done: boolean;
   extraction_done: boolean;
 };
 type Tab = "files" | "admission" | "aadhaar" | "tc";
-export default function Dashboard() {
 
+
+
+export default function Dashboard() {
+  const [running, setRunning] = useState(false);
   const [tab, setTab] = useState<Tab>("files");
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [files, setFiles] = useState<FileRow[]>([]);
+
 
   const loadFiles = async () => {
     const res = await apiFetch("http://localhost:8000/api/files");
@@ -36,6 +41,28 @@ export default function Dashboard() {
 
     loadFiles();
   }, []);
+  useEffect(() => {
+  if (!running) return;
+
+  const interval = setInterval(async () => {
+    const res = await apiFetch("http://localhost:8000/api/files");
+    const data: FileRow[] = await res.json();
+
+    setFiles(data);
+
+    const allDone =
+      data.length > 0 &&
+      data.every(f => f.ocr_done && f.extraction_done);
+
+    if (allDone) {
+      setRunning(false);
+      setStatus("Pipeline completed ✅");
+      clearInterval(interval);
+    }
+  }, 1500);
+
+  return () => clearInterval(interval);
+}, [running]);
 
   const handleUpload = async () => {
     if (!file) {
@@ -69,12 +96,15 @@ export default function Dashboard() {
 
   const runPipeline = async () => {
     setStatus("Running OCR + extraction...");
+    setRunning(true);
+
     await apiFetch("http://localhost:8000/api/ocr/run", {
       method: "POST",
     });
-    setStatus("Pipeline completed ✅");
-    loadFiles();
+
+    // start polling
   };
+
 
   return (
     <div style={{ maxWidth: 600, margin: "50px auto" }}>
@@ -113,7 +143,7 @@ export default function Dashboard() {
           <table width="100%" border={1} cellPadding={6}>
             <thead>
               <tr>
-                <th>File</th>
+                <th>Name</th>
                 <th>Doc Type</th>
                 <th>OCR</th>
                 <th>Extraction</th>
@@ -122,7 +152,8 @@ export default function Dashboard() {
             <tbody>
               {files.map((f) => (
                 <tr key={f.file_id}>
-                  <td>{f.file_path}</td>
+                  
+                  <td>{f.display_name}</td>
                   <td>{f.doc_type}</td>
                   <td>{f.ocr_done ? "✓" : "⏳"}</td>
                   <td>{f.extraction_done ? "✓" : "⛔"}</td>
