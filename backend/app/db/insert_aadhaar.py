@@ -1,5 +1,6 @@
 from sqlalchemy import text
 
+
 def insert_aadhaar(db,file_id, data: dict) -> int:
     """
     Inserts Aadhaar document and returns doc_id.

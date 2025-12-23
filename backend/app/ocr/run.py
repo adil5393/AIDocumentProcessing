@@ -7,10 +7,16 @@ from .gpt_doc_classifier import gpt_detect_document_type
 from app.db.insert_admission_form import insert_admission_form
 from app.db.insert_aadhaar import insert_aadhaar
 from app.db.insert_transfer_certificate import insert_transfer_certificate
-from app.db.aadhaarlookup import run_aadhaar_lookup
+from app.db.aadhaar_lookup import run_aadhaar_lookup
+from app.db.transfer_certificate_lookup import run_tc_lookup
 import os
 import json
+from app.ocr.set_file_name import clean, tc_display_name,aadhaar_display_name,admission_display_name
+from app.db.update_display_name import update_display_name
+
 UPLOAD_DIR = "uploads"
+
+
 
 def run():
     db = SessionLocal()
@@ -74,15 +80,25 @@ def run():
 
             try:
                 if doc_type == "admission_form":
-                    print(doc_type)
-                    insert_admission_form(db, structured)
-                    print(doc_type)
+                    insert_admission_form(db, file_id, structured)
+                    dn = admission_display_name(structured)
+                    update_display_name(db, file_id, dn)
+                    
                 elif doc_type == "aadhaar":
-                    doc_id = insert_aadhaar(db,file_id, structured)
+                    doc_id = insert_aadhaar(db, file_id, structured)
+                    dn = aadhaar_display_name(structured)
+                    update_display_name(db, file_id, dn)
+                    db.commit()
                     if structured.get("aadhaar_number"):
                         run_aadhaar_lookup(db, doc_id)
+
                 elif doc_type == "transfer_certificate":
-                    insert_transfer_certificate(db,file_id, structured)
+                    doc_id = insert_transfer_certificate(db, file_id, structured)
+
+                    dn = tc_display_name(structured)
+                    update_display_name(db, file_id, dn)
+                    db.commit()
+                    run_tc_lookup(db, doc_id)
 
                 db.execute(text("""
                     UPDATE uploaded_files

@@ -9,6 +9,7 @@ type TCRow = {
   father_name: string | null;
   mother_name: string | null;
   date_of_birth: string | null;
+  lookup_status: string | null;
   last_class_studied: string | null;
   last_school_name: string | null;
 };
@@ -34,6 +35,7 @@ export default function TransferCerts() {
               <th>Father Name</th>
               <th>Mother Name</th>
               <th>DOB</th>
+              <th>Lookup Status</th>
               <th>Last Class</th>
               <th>Last School</th>
             </tr>
@@ -45,6 +47,7 @@ export default function TransferCerts() {
                 <td>{r.father_name || "-"}</td>
                 <td>{r.mother_name || "-"}</td>
                 <td>{r.date_of_birth || "-"}</td>
+                <td>{r.lookup_status || "-"}</td>
                 <td>{r.last_class_studied || "-"}</td>
                 <td>{r.last_school_name || "-"}</td>
               </tr>
