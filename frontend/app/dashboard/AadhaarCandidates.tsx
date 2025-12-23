@@ -1,0 +1,63 @@
+"use client";
+
+import SignalBadge from "./SignalBadge";
+import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
+import './dashboard.css';
+
+type AadhaarCandidate = {
+  sr: string;
+  role: string;
+  student_name: string;
+  total_score: number;
+  signals: Record<string, any>;
+};
+
+export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
+  const [rows, setRows] = useState<AadhaarCandidate[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const res = await apiFetch(
+        `http://localhost:8000/api/aadhaar/${docId}/candidates`
+      );
+      const data = await res.json();
+      setRows(data);
+      setLoading(false);
+    };
+    load();
+  }, [docId]);
+
+  if (loading) return <p>Loading Aadhaar matches…</p>;
+  if (!rows.length) return <p>No Aadhaar matches found.</p>;
+
+  return (
+    <table className="table">
+      <thead>
+        <tr>
+          <th>SR</th>
+          <th>Role</th>
+          <th>Name</th>
+          <th>Score</th>
+          <th>Signals</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r, i) => (
+          <tr key={i}>
+            <td> {r.sr}</td>
+            <td>{r.role}</td>
+            <td>{r.student_name}</td>
+            <td>{r.total_score.toFixed(2)}</td>
+            <td colSpan={8} className="expanded-row">
+              {Object.entries(r.signals).map(([k, v]) => (
+                <SignalBadge key={k} label={k} value={v} />
+              ))}
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}

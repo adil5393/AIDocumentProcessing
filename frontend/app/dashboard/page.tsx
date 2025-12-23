@@ -6,6 +6,7 @@ import { apiFetch } from "../lib/api";
 import AdmissionForms from "./AdmissionForms";
 import Aadhaars from "./Aadhaars";
 import TransferCerts from "./TransferCerts";
+import "./dashboard.css";
 
 type FileRow = {
   file_id: number;
@@ -15,9 +16,7 @@ type FileRow = {
   ocr_done: boolean;
   extraction_done: boolean;
 };
-type Tab = "files" | "admission" | "aadhaar" | "tc";
-
-
+type Tab = "files" | "admission" | "aadhaar" | "tc" ;
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
@@ -25,6 +24,7 @@ export default function Dashboard() {
   const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
   const [files, setFiles] = useState<FileRow[]>([]);
+  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
 
 
   const loadFiles = async () => {
@@ -107,7 +107,7 @@ export default function Dashboard() {
 
 
   return (
-    <div style={{ maxWidth: 600, margin: "50px auto" }}>
+    <div className="dashboard">
       <h1>Dashboard</h1>
 
       <input
@@ -130,17 +130,25 @@ export default function Dashboard() {
         <button onClick={() => setTab("admission")}>Admission Forms</button>
         <button onClick={() => setTab("aadhaar")}>Aadhaar</button>
         <button onClick={() => setTab("tc")}>Transfer Certificates</button>
+
       </div>
 
       <div>
         {tab === "admission" && (
           <AdmissionForms />
         )}
-        {tab === "aadhaar" && <Aadhaars />}
+        {tab === "aadhaar" && (
+          <Aadhaars
+            selectedDocId={selectedDocId}
+            onSelectDoc={(docId: number) =>
+              setSelectedDocId(docId === selectedDocId ? null : docId)
+            }
+          />
+        )}
         {tab === "tc" && <TransferCerts />}
       </div>
         {tab === "files" && (
-          <table width="100%" border={1} cellPadding={6}>
+          <table className="table">
             <thead>
               <tr>
                 <th>Name</th>
@@ -159,7 +167,7 @@ export default function Dashboard() {
                   <td>{f.extraction_done ? "✓" : "⛔"}</td>
                   <td>
                     {(
-                      <button
+                      <button className="btn"
                         onClick={async () => {
                           if (!confirm("Delete this file?")) return;
 
@@ -182,7 +190,7 @@ export default function Dashboard() {
         </table>
       )}
       <br />
-      <button onClick={logout}>Logout</button>
+      <button className="btn" onClick={logout}>Logout</button>
     </div>
   );
 }
