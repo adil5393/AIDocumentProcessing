@@ -41,6 +41,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
           <th>Name</th>
           <th>Score</th>
           <th>Signals</th>
+          
         </tr>
       </thead>
       <tbody>
@@ -55,6 +56,29 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
                 <SignalBadge key={k} label={k} value={v} />
               ))}
             </td>
+            <td><button
+                className="btn"
+                onClick={async () => {
+                  if (!confirm("Confirm this Aadhaar match?")) return;
+
+                  await apiFetch(
+                    `http://localhost:8000/api/aadhaar/${docId}/confirm`,
+                    {
+                      method: "POST",
+                      body: JSON.stringify({
+                        sr: r.sr,
+                        role: r.role,
+                        score: r.total_score,
+                        method: "manual_confirm",
+                      }),
+                    }
+                  );
+
+                  alert("Match confirmed");
+                }}
+              >
+                ✅ Confirm
+              </button></td>
           </tr>
         ))}
       </tbody>

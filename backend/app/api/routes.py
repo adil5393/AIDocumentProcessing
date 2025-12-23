@@ -187,6 +187,7 @@ def aadhaar_lookup(
             SELECT lookup_status
             FROM aadhaar_documents
             WHERE doc_id = :doc_id
+            AND lookup_status NOT IN ('single_match', 'confirmed');
         """),
         {"doc_id": doc_id}
     ).fetchone()
@@ -213,7 +214,7 @@ def run_pending_aadhaar_lookups(
         text("""
     SELECT doc_id
     FROM aadhaar_documents
-    where lookup_status not in ('single match')
+    where lookup_status not in ('single match','confirmed')
 """)
     ).fetchall()
     processed = 0
@@ -565,6 +566,67 @@ def run_pending_tc_lookups(
         run_tc_lookup(db, r.doc_id)
 
     return {"processed_count": len(rows)}
+
+@router.post("/aadhaar/{doc_id}/confirm")
+def confirm_aadhaar_match(
+    doc_id: int,
+    payload: dict,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    sr = payload["sr"]
+    role = payload["role"]
+    score = payload.get("score", 0)
+    method = payload.get("method", "manual")
+
+    # 1️⃣ Insert final match
+    db.execute(
+        text("""
+            INSERT INTO aadhaar_matches (
+                sr_number,
+                aadhaar_doc_id,
+                match_role,
+                match_score,
+                match_method,
+                is_confirmed,
+                confirmed_on
+            )
+            VALUES (
+                :sr, :doc_id, :role, :score, :method, true, now()
+            )
+        """),
+        {
+            "sr": sr,
+            "doc_id": doc_id,
+            "role": role,
+            "score": int(score * 100),  # normalize
+            "method": method,
+        }
+    )
+
+    # 2️⃣ Remove all candidates for this Aadhaar doc
+    db.execute(
+        text("""
+            DELETE FROM aadhaar_lookup_candidates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    # 3️⃣ Update Aadhaar document status
+    db.execute(
+        text("""
+            UPDATE aadhaar_documents
+            SET lookup_status = 'confirmed',
+                lookup_checked_at = now()
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    db.commit()
+    return {"status": "confirmed"}
+
 
 @router.post("/login")
 def login(data: LoginRequest):

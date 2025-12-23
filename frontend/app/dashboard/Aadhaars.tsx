@@ -12,7 +12,7 @@ type AadhaarRow = {
   aadhaar_number: string | null;
   relation_type: string | null;
   related_name: string | null;
-  lookup_status: "pending" | "single_match" | "multiple_match" | "no_match" | "error";
+  lookup_status: "pending" | "single_match" | "multiple_match" | "no_match" | "error" | "confirmed";
   lookup_checked_at: string | null;
 };
 type Props = {
@@ -90,6 +90,7 @@ async function runPendingLookups() {
               {r.lookup_status === "multiple_match" && "⚠️ Multiple Matches"}
               {r.lookup_status === "no_match" && "❓ No Match"}
               {r.lookup_status === "error" && "❌ Error"}
+              {r.lookup_status === "confirmed" && "Confirmed"}
             </td>
 
             <td>

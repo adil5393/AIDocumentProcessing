@@ -94,7 +94,7 @@ def run():
 
                 elif doc_type == "transfer_certificate":
                     doc_id = insert_transfer_certificate(db, file_id, structured)
-
+                    
                     dn = tc_display_name(structured)
                     update_display_name(db, file_id, dn)
                     db.commit()

@@ -117,7 +117,7 @@ export default function Dashboard() {
       <br /><br />
 
       <button onClick={handleUpload}>Upload</button>
-      <button onClick={runPipeline} style={{ marginLeft: 10 }}>
+      <button className="btn" onClick={runPipeline} style={{ marginLeft: 10 }}>
         Run OCR + Extraction
       </button>
 
