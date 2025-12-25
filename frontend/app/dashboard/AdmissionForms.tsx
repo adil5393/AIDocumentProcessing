@@ -179,6 +179,7 @@ export default function AdmissionForms() {
                 <th>Aadhaar</th>
                 <th>Last School</th>
                 <th>Created At</th>
+                <th>Action</th>
               </tr>
             </thead>
 
@@ -261,6 +262,7 @@ export default function AdmissionForms() {
                   <td>{r.aadhaar_number}</td>
                   <td>{r.last_school_attended}</td>
                   <td>{r.created_at}</td>
+                  <td><button className="btn">Post</button></td>
                 </tr>
               ))}
             </tbody>
