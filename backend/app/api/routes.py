@@ -1,7 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi import Depends, Header
-from app.services.amtech import test_connection
-from app.services.auth_service import authenticate
+from app.integrations.amtech_auth import get_token
+from app.integrations.amtech_client import list_students
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from fastapi import APIRouter
@@ -14,11 +14,17 @@ from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
 from app.db.aadhaar_lookup import run_aadhaar_lookup
+from typing import Dict, Any
+from fastapi.responses import StreamingResponse
+from openpyxl import Workbook
+from io import BytesIO
 
 import threading, json
 
 import os
 import uuid
+
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 router = APIRouter(prefix="/api")
 
@@ -31,6 +37,7 @@ class SRDeclareRequest(BaseModel):
 
 
 def require_token(authorization: str = Header(None)):
+
     if authorization != "Bearer fake-token-123":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -326,7 +333,9 @@ def list_admission_forms(
             gender,
             date_of_birth,
             father_name,
+            father_aadhaar,
             mother_name,
+            mother_aadhaar,
             father_occupation,
             mother_occupation,
             address,
@@ -347,7 +356,9 @@ def list_admission_forms(
         "gender": r.gender,
         "date_of_birth": r.date_of_birth,
         "father_name": r.father_name,
+        "father_aadhaar":r.father_aadhaar,
         "mother_name": r.mother_name,
+        "mother_aadhaar":r.mother_aadhaar,
         "father_occupation": r.father_occupation,
         "mother_occupation": r.mother_occupation,
         "address": r.address,
@@ -574,6 +585,32 @@ def confirm_aadhaar_match(
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
 ):
+    ROLE_UPDATE_SQL = {
+    "student": """
+        UPDATE admission_forms af
+        SET student_aadhaar_number = ad.aadhaar_number
+        FROM aadhaar_documents ad
+        WHERE af.sr = :sr
+          AND ad.doc_id = :doc_id
+          AND af.student_aadhaar_number IS NULL
+    """,
+    "father": """
+        UPDATE admission_forms af
+        SET father_aadhaar = ad.aadhaar_number
+        FROM aadhaar_documents ad
+        WHERE af.sr = :sr
+          AND ad.doc_id = :doc_id
+          AND af.father_aadhaar IS NULL
+    """,
+    "mother": """
+        UPDATE admission_forms af
+        SET mother_aadhaar = ad.aadhaar_number
+        FROM aadhaar_documents ad
+        WHERE af.sr = :sr
+          AND ad.doc_id = :doc_id
+          AND af.mother_aadhaar IS NULL
+    """,
+}
     sr = payload["sr"]
     role = payload["role"]
     score = payload.get("score", 0)
@@ -623,10 +660,266 @@ def confirm_aadhaar_match(
         """),
         {"doc_id": doc_id}
     )
-
+    update_sql = ROLE_UPDATE_SQL.get(role)
+    if update_sql:
+        db.execute(
+            text(update_sql),
+            {
+                "sr": sr,
+                "doc_id": doc_id,
+            }
+        )
     db.commit()
     return {"status": "confirmed"}
+    
 
+@router.post("/tc/{doc_id}/confirm")
+def confirm_tc_match(
+    doc_id: int,
+    payload: dict,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    sr = payload["sr"]
+    score = payload.get("score", 0)
+    method = payload.get("method", "manual_confirm")
+
+    # 1️⃣ Get file_id for cascade safety
+    row = db.execute(
+        text("""
+            SELECT file_id
+            FROM transfer_certificates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Transfer Certificate not found")
+
+    file_id = row.file_id
+
+    # 2️⃣ Insert final TC match
+    db.execute(
+        text("""
+            INSERT INTO tc_matches (
+                sr_number,
+                tc_doc_id,
+                file_id,
+                match_score,
+                match_method,
+                is_confirmed,
+                confirmed_on
+            )
+            VALUES (
+                :sr, :doc_id, :file_id, :score, :method, true, now()
+            )
+        """),
+        {
+            "sr": sr,
+            "doc_id": doc_id,
+            "file_id": file_id,
+            "score": int(score * 100),
+            "method": method,
+        }
+    )
+
+    # 3️⃣ Delete all TC candidates
+    db.execute(
+        text("""
+            DELETE FROM transfer_certificate_candidates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    # 4️⃣ Mark TC as confirmed
+    db.execute(
+        text("""
+            UPDATE transfer_certificates
+            SET lookup_status = 'Confirmed',
+                lookup_checked_at = now()
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    db.commit()
+    return {"status": "Confirmed"}
+
+
+@router.patch("/admission-forms/{sr:path}")
+def patch_admission_form(
+    sr: str,
+    payload: Dict[str, Any],
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    ALLOWED_FIELDS = {
+    "student_name",
+    "date_of_birth",
+    "father_name",
+    "mother_name",
+    "phone1",
+    "phone2",
+    "father_aadhaar",
+    "class"
+}
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+
+    updates = []
+    params = {"sr": sr}
+
+    for field, value in payload.items():
+        if field not in ALLOWED_FIELDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be edited"
+            )
+
+        # Normalize OCR junk
+        if isinstance(value, str):
+            value = value.strip()
+
+        updates.append(f"{field} = :{field}")
+        params[field] = value
+
+    query = f"""
+        UPDATE admission_forms
+        SET {", ".join(updates)}
+        WHERE sr = :sr
+    """
+
+    result = db.execute(text(query), params)
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="SR not found")
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "sr": sr,
+        "updated_fields": list(payload.keys())
+    }
+
+@router.get("/export/student-documents.xlsx")
+def export_student_documents(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Student Document Comparison"
+
+    # ---- Header ----
+    headers = [
+        "SR",
+        "Source",
+        "Student Name",
+        "Father Name",
+        "Mother Name",
+        "Date of Birth",
+        "Aadhaar Number",
+    ]
+    ws.append(headers)
+
+    # ---- Fetch base SRs ----
+    admission_rows = db.execute(text("""
+        SELECT
+            sr,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            student_aadhaar_number
+        FROM admission_forms
+        ORDER BY sr
+    """)).fetchall()
+
+    for adm in admission_rows:
+        sr = adm.sr
+
+        # =========================
+        # 1️⃣ Admission Form row
+        # =========================
+        ws.append([
+            sr,
+            "Admission Form",
+            adm.student_name,
+            adm.father_name,
+            adm.mother_name,
+            adm.date_of_birth,
+            adm.student_aadhaar_number,
+        ])
+
+        # =========================
+        # 2️⃣ Aadhaar row (always present)
+        # =========================
+        aadhaar = db.execute(text("""
+            SELECT
+                d.name,
+                d.date_of_birth,
+                d.aadhaar_number
+            FROM aadhaar_matches m
+            JOIN aadhaar_documents d
+              ON d.doc_id = m.aadhaar_doc_id
+            WHERE m.sr_number = :sr
+              AND m.match_role = 'student'
+              AND m.is_confirmed = true
+            LIMIT 1
+        """), {"sr": sr}).fetchone()
+
+        ws.append([
+            sr,
+            "Aadhaar",
+            aadhaar.name if aadhaar else None,
+            None,
+            None,
+            aadhaar.date_of_birth if aadhaar else None,
+            aadhaar.aadhaar_number if aadhaar else None,
+        ])
+
+        # =========================
+        # 3️⃣ Transfer Certificate row (always present)
+        # =========================
+        tc = db.execute(text("""
+            SELECT
+                t.student_name,
+                t.father_name,
+                t.mother_name,
+                t.date_of_birth
+            FROM tc_matches m
+            JOIN transfer_certificates t
+              ON t.doc_id = m.tc_doc_id
+            WHERE m.sr_number = :sr
+              AND m.is_confirmed = true
+            LIMIT 1
+        """), {"sr": sr}).fetchone()
+
+        ws.append([
+            sr,
+            "Transfer Certificate",
+            tc.student_name if tc else None,
+            tc.father_name if tc else None,
+            tc.mother_name if tc else None,
+            tc.date_of_birth if tc else None,
+            None,
+        ])
+
+    # ---- Stream Excel file ----
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={
+            "Content-Disposition": "attachment; filename=student_document_comparison.xlsx"
+        },
+    )
 
 @router.post("/login")
 def login(data: LoginRequest):
@@ -637,25 +930,32 @@ def login(data: LoginRequest):
         }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@router.get("/service-token")
-def get_service_token():
-    token = authenticate()
-    return {"token": token}
+# @router.get("/service-token")
+# def get_service_token():
+#     token = authenticate()
+#     return {"token": token}
 
 @router.get("/status")
 def status():
     return {"status": "ok"}
 
 
-@router.get("/token-test")
-def token_test():
-    return test_connection()
+@router.get("/amtech/ping")
+def amtech_ping():
+    token = get_token()
+    return {
+        "ok": True,
+        "token_preview": token[:20]
+    }
 
-
-# @router.post("/upload")
-# async def upload(files: list[UploadFile]):
-#     filenames = [f.filename for f in files]
-#     return {"received": filenames, "count": len(files)}
+@router.get("/amtech/students-test")
+def students_test():
+    status, body = list_students()
+    return {
+        "status": status,
+        "preview": body[:500]
+    }
+    
 
 @router.get("/health")
 def health_check():

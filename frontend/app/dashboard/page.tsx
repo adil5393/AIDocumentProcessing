@@ -26,7 +26,27 @@ export default function Dashboard() {
   const [files, setFiles] = useState<FileRow[]>([]);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
 
-
+  function exportExcel() {
+    apiFetch("http://localhost:8000/api/export/student-documents.xlsx")
+      .then(res => {
+        if (!res.ok) throw new Error("Export failed");
+        return res.blob();
+      })
+      .then(blob => {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "student_document_comparison.xlsx";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      })
+      .catch(err => {
+        alert("Failed to download Excel");
+        console.error(err);
+      });
+  }
   const loadFiles = async () => {
     const res = await apiFetch("http://localhost:8000/api/files");
     const data = await res.json();
@@ -117,7 +137,7 @@ export default function Dashboard() {
       <br /><br />
 
       <button onClick={handleUpload}>Upload</button>
-      <button className="btn" onClick={runPipeline} style={{ marginLeft: 10 }}>
+      <button className="btn"   onClick={runPipeline} style={{ marginLeft: 10 }}>
         Run OCR + Extraction
       </button>
 
@@ -190,6 +210,13 @@ export default function Dashboard() {
         </table>
       )}
       <br />
+      <button
+        className="btn"
+        onClick={exportExcel}
+        style={{ marginBottom: 12 }}
+      >
+        📥 Export Student Comparison (Excel)
+      </button>
       <button className="btn" onClick={logout}>Logout</button>
     </div>
   );

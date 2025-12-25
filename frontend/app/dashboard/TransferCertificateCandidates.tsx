@@ -48,6 +48,29 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
                 <SignalBadge key={k} label={k} value={v} />
               ))}
             </td>
+            <td>
+            <button
+              className="btn"
+              onClick={async () => {
+                if (!confirm("Confirm this Transfer Certificate match?")) return;
+
+                await apiFetch(
+                  `http://localhost:8000/api/tc/${docId}/confirm`,
+                  {
+                    method: "POST",
+                    body: JSON.stringify({
+                      sr: r.sr,
+                      score: r.total_score,
+                      method: "manual_confirm",
+                    }),
+                  }
+                );
+
+                alert("TC match confirmed");
+              }}
+            >
+              ✅ Confirm
+            </button></td>
           </tr>
         ))}
       </tbody>

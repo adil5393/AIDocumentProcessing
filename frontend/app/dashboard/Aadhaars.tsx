@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
 import React from "react";
 
+
 type AadhaarRow = {
   doc_id: number;
   name: string;
@@ -75,59 +76,59 @@ async function runPendingLookups() {
           </thead>
 
          <tbody>
-  {rows.map(r => (
-        <React.Fragment key={r.doc_id}>
-          <tr>
-            <td>{r.name}</td>
-            <td>{r.date_of_birth || "-"}</td>
-            <td>{r.aadhaar_number || "-"}</td>
-            <td>{r.relation_type || "-"}</td>
-            <td>{r.related_name || "-"}</td>
-
-            <td>
-              {r.lookup_status === "pending" && "⏳ Pending"}
-              {r.lookup_status === "single_match" && "✅ Single Match"}
-              {r.lookup_status === "multiple_match" && "⚠️ Multiple Matches"}
-              {r.lookup_status === "no_match" && "❓ No Match"}
-              {r.lookup_status === "error" && "❌ Error"}
-              {r.lookup_status === "confirmed" && "Confirmed"}
-            </td>
-
-            <td>
-              {r.lookup_checked_at
-                ? new Date(r.lookup_checked_at).toLocaleString()
-                : "-"}
-            </td>
-
-            <td>
-              <button className="btn"
-                onClick={() => onSelectDoc(r.doc_id)}
-                style={{ fontSize: 12 }}
-              >
-                {selectedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
-              </button>
-
-              {r.lookup_status !== "pending" && (
-                <button className="btn"
-                  onClick={() => rerunLookup(r.doc_id)}
-                  style={{ fontSize: 12, marginLeft: 6 }}
-                >
-                  Re-run Lookup
-                </button>
-              )}
-            </td>
-          </tr>
-
-          {selectedDocId === r.doc_id && (
+          {rows.map(r => (
+          <React.Fragment key={r.doc_id}>
             <tr>
-              <td colSpan={8} style={{ background: "#fafafa" }}>
-                <AadhaarLookupCandidates docId={r.doc_id} />
+              <td>{r.name}</td>
+              <td>{r.date_of_birth || "-"}</td>
+              <td>{r.aadhaar_number || "-"}</td>
+              <td>{r.relation_type || "-"}</td>
+              <td>{r.related_name || "-"}</td>
+
+              <td>
+                {r.lookup_status === "pending" && "⏳ Pending"}
+                {r.lookup_status === "single_match" && "✅ Single Match"}
+                {r.lookup_status === "multiple_match" && "⚠️ Multiple Matches"}
+                {r.lookup_status === "no_match" && "❓ No Match"}
+                {r.lookup_status === "error" && "❌ Error"}
+                {r.lookup_status === "confirmed" && "Confirmed"}
               </td>
-            </tr>
-          )}
-        </React.Fragment>
-      ))}
-    </tbody>
+
+              <td>
+                {r.lookup_checked_at
+                  ? new Date(r.lookup_checked_at).toLocaleString()
+                  : "-"}
+              </td>
+
+              <td>
+                <button className="btn"
+                  onClick={() => onSelectDoc(r.doc_id)}
+                  style={{ fontSize: 12 }}
+                >
+                  {selectedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
+                </button>
+
+                {r.lookup_status !== "pending" && (
+                  <button className="btn"
+                    onClick={() => rerunLookup(r.doc_id)}
+                    style={{ fontSize: 12, marginLeft: 6 }}
+                  >
+                    Re-run Lookup
+                  </button>
+                )}
+              </td>
+            </tr> 
+
+            {selectedDocId === r.doc_id && (
+              <tr>
+                <td colSpan={8} className="expanded-row">
+                  <AadhaarLookupCandidates docId={r.doc_id} />
+                </td>
+              </tr>
+            )}
+          </React.Fragment>
+        ))}
+      </tbody>
 
         </table>
           <button className="btn"
