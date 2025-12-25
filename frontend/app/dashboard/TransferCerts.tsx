@@ -40,7 +40,6 @@ export default function TransferCerts() {
       .then(setRows);
   }, []);
     async function rerunLookup(docId: number) {
-    if (!confirm("Re-run lookup for this Transfer Certificate?")) return;
 
     await apiFetch(
       `http://localhost:8000/api/tc/${docId}/lookup?force=true`,

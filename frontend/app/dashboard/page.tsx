@@ -175,6 +175,7 @@ export default function Dashboard() {
                 <th>Doc Type</th>
                 <th>OCR</th>
                 <th>Extraction</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>

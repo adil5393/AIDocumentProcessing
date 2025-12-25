@@ -1,7 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from fastapi import Depends, Header
-from app.integrations.amtech_auth import get_token
-from app.integrations.amtech_client import list_students
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from fastapi import APIRouter
@@ -181,63 +179,7 @@ def cleanup_expired_srs(
         "message": "Expired SRs cleaned up",
         "deleted_count": result.rowcount
     }
-@router.post("/aadhaar/{doc_id}/lookup")
-def aadhaar_lookup(
-    
-    doc_id: int,
-    force: bool = False,   # 👈 important
-    _: str = Depends(require_token),
-    db: Session = Depends(get_db)
-):
-    row = db.execute(
-        text("""
-            SELECT lookup_status
-            FROM aadhaar_documents
-            WHERE doc_id = :doc_id
-            AND lookup_status NOT IN ('single_match', 'confirmed');
-        """),
-        {"doc_id": doc_id}
-    ).fetchone()
 
-    if not row:
-        raise HTTPException(404, "Aadhaar document not found")
-
-    if row.lookup_status != "pending" and not force:
-        return {
-            "status": row.lookup_status,
-            "message": "Lookup already completed. Use force=true to re-run."
-        }
-
-    result = run_aadhaar_lookup(db, doc_id)
-    return result
-
-@router.post("/aadhaar/lookup/pending")
-def run_pending_aadhaar_lookups(
-    _: str = Depends(require_token),
-    db: Session = Depends(get_db)
-):
-    
-    rows = db.execute(
-        text("""
-    SELECT doc_id
-    FROM aadhaar_documents
-    where lookup_status not in ('single match','confirmed')
-""")
-    ).fetchall()
-    processed = 0
-    for r in rows:
-        try:
-            run_aadhaar_lookup(db, r.doc_id)
-            processed += 1
-        except Exception as e:
-            # do NOT crash whole batch
-            print (e)
-            continue
-
-    return {
-        "message": "Pending Aadhaar lookups processed",
-        "processed_count": processed
-    }   
 UPLOAD_DIR = "uploads"
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -534,28 +476,89 @@ def get_tc_candidates(
         for r in rows
     ]
 
+@router.post("/aadhaar/{doc_id}/lookup")
+def aadhaar_lookup(
+    
+    doc_id: int,
+    force: bool = False,   # 👈 important
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    row = db.execute(
+        text("""
+            SELECT lookup_status
+            FROM aadhaar_documents
+            WHERE doc_id = :doc_id
+            AND lookup_status NOT IN ('single_match', 'confirmed');
+        """),
+        {"doc_id": doc_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Aadhaar document not found")
+
+    if row.lookup_status != "pending" and not force:
+        return {
+            "status": row.lookup_status,
+            "message": "Lookup already completed. Use force=true to re-run."
+        }
+
+    result = run_aadhaar_lookup(db, doc_id)
+    return result
+
+@router.post("/aadhaar/lookup/pending")
+def run_pending_aadhaar_lookups(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    
+    rows = db.execute(
+        text("""
+    SELECT doc_id
+    FROM aadhaar_documents
+    where lookup_status not in ('single match','confirmed')
+""")
+    ).fetchall()
+    processed = 0
+    for r in rows:
+        try:
+            run_aadhaar_lookup(db, r.doc_id)
+            processed += 1
+        except Exception as e:
+            # do NOT crash whole batch
+            print (e)
+            continue
+
+    return {
+        "message": "Pending Aadhaar lookups processed",
+        "processed_count": processed
+    }   
+
 @router.post("/tc/{doc_id}/lookup")
 def rerun_tc_lookup(
     doc_id: int,
-    force: bool = True,
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.db.transfer_certificate_lookup import run_tc_lookup
-
-    if force:
-        db.execute(
-            text("""
-                UPDATE transfer_certificates
-                SET lookup_status = 'pending',
-                    lookup_checked_at = NULL
-                WHERE doc_id = :d
-            """),
-            {"d": doc_id}
+    # 🔒 block if confirmed
+    status = db.execute(
+        text("""
+            SELECT lookup_status
+            FROM transfer_certificates
+            WHERE doc_id = :d
+        """),
+        {"d": doc_id}
+    ).scalar()
+    print(status)
+    if status == "Confirmed":
+        raise HTTPException(
+            status_code=409,
+            detail="Lookup already confirmed. Unconfirm before re-running."
         )
-        db.commit()
 
+    from app.db.transfer_certificate_lookup import run_tc_lookup
     run_tc_lookup(db, doc_id)
+
     return {"status": "ok"}
 
 @router.post("/tc/lookup/pending")
@@ -569,7 +572,7 @@ def run_pending_tc_lookups(
         text("""
             SELECT doc_id
             FROM transfer_certificates
-            WHERE lookup_status IS DISTINCT FROM 'single_match'
+            WHERE lookup_status IS DISTINCT FROM 'Confirmed'
         """)
     ).fetchall()
 
@@ -930,32 +933,9 @@ def login(data: LoginRequest):
         }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-# @router.get("/service-token")
-# def get_service_token():
-#     token = authenticate()
-#     return {"token": token}
-
 @router.get("/status")
 def status():
     return {"status": "ok"}
-
-
-@router.get("/amtech/ping")
-def amtech_ping():
-    token = get_token()
-    return {
-        "ok": True,
-        "token_preview": token[:20]
-    }
-
-@router.get("/amtech/students-test")
-def students_test():
-    status, body = list_students()
-    return {
-        "status": status,
-        "preview": body[:500]
-    }
-    
 
 @router.get("/health")
 def health_check():
