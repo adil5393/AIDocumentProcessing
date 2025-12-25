@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../lib/api";
+import EditableCell from './EditableCell';
 
 
 export default function AdmissionForms() {
@@ -99,7 +100,7 @@ export default function AdmissionForms() {
       <div style={{ display: "flex", gap: 20 }}>
 
         {/* ================= LEFT PANE ================= */}
-        <div style={{ width: "25%", borderRight: "1px solid #ccc", paddingRight: 10 }}>
+        <div style={{ width: "10%", borderRight: "1px solid #ccc", paddingRight: 10 }}>
           <h4>Reserved SRs</h4>
 
           {reservedSRs.length === 0 && (
@@ -155,7 +156,7 @@ export default function AdmissionForms() {
         </div>
 
         {/* ================= RIGHT PANE ================= */}
-        <div style={{ width: "75%" }}>
+        <div style={{ width: "90%" }}>
           <h4>Admission Forms</h4>
 
           <table className="table">
@@ -165,9 +166,11 @@ export default function AdmissionForms() {
                 <th>Class</th>
                 <th>Name</th>
                 <th>Gender</th>
-                <th>DOB</th>
+                <th>DOB(yyyy-mm-dd)</th>
                 <th>Father Name</th>
+                <th>Father Aadhaar</th>
                 <th>Mother Name</th>
+                <th>Mother Aadhaar</th>
                 <th>Father Occupation</th>
                 <th>Mother Occupation</th>
                 <th>Address</th>
@@ -183,17 +186,78 @@ export default function AdmissionForms() {
               {rows.map(r => (
                 <tr key={r.sr}>
                   <td>{r.sr}</td>
-                  <td>{r.class}</td>
-                  <td>{r.student_name}</td>
+                  <td><EditableCell
+                      value={r.class}
+                      sr={r.sr}
+                      field="class"
+                      onSaved={fetchAdmissionForms}
+                    /></td>
+
+                  <td>
+                    <EditableCell
+                      value={r.student_name}
+                      sr={r.sr}
+                      field="student_name"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+
                   <td>{r.gender}</td>
-                  <td>{r.date_of_birth}</td>
-                  <td>{r.father_name}</td>
-                  <td>{r.mother_name}</td>
+
+                  <td>
+                    <EditableCell
+                      value={r.date_of_birth}
+                      sr={r.sr}
+                      field="date_of_birth"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+
+                  <td>
+                    <EditableCell
+                      value={r.father_name}
+                      sr={r.sr}
+                      field="father_name"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+
+                  <td>
+                    {r.father_aadhaar}
+                  </td>
+                  <td>
+                    <EditableCell
+                      value={r.mother_name}
+                      sr={r.sr}
+                      field="mother_name"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+                  <td>
+                    {r.mother_aadhaar}
+                  </td>
                   <td>{r.father_occupation}</td>
                   <td>{r.mother_occupation}</td>
                   <td>{r.address}</td>
-                  <td>{r.phone1}</td>
-                  <td>{r.phone2}</td>
+
+                  <td>
+                    <EditableCell
+                      value={r.phone1}
+                      sr={r.sr}
+                      field="phone1"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+
+                  <td>
+                    <EditableCell
+                      value={r.phone2}
+                      sr={r.sr}
+                      field="phone2"
+                      onSaved={fetchAdmissionForms}
+                    />
+                  </td>
+
                   <td>{r.aadhaar_number}</td>
                   <td>{r.last_school_attended}</td>
                   <td>{r.created_at}</td>

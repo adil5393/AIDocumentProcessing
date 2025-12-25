@@ -20,6 +20,20 @@ type TCRow = {
 export default function TransferCerts() {
   const [rows, setRows] = useState<TCRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
+  async function runPendingLookups() {
+    const res = await apiFetch(
+      "http://localhost:8000/api/tc/lookup/pending",
+      { method: "POST" }
+    );
+
+    const data = await res.json();
+    alert(`Processed ${data.processed_count} Transfer Certificate(s)`);
+
+    const refreshed = await apiFetch(
+      "http://localhost:8000/api/transfer-certificates"
+    );
+    setRows(await refreshed.json());
+  }
   useEffect(() => {
     apiFetch("http://localhost:8000/api/transfer-certificates")
       .then(res => res.json())
@@ -99,9 +113,14 @@ export default function TransferCerts() {
               </React.Fragment>
             ))}
           </tbody>
-
-
         </table>
+        <button
+          className="btn"
+          onClick={runPendingLookups}
+          style={{ marginBottom: 10 }}
+        >
+          Run Lookup for Pending Transfer Certificates
+        </button>
       </div>
     </>
   );
