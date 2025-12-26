@@ -35,7 +35,7 @@ class SRDeclareRequest(BaseModel):
 
 
 def require_token(authorization: str = Header(None)):
-
+    print(authorization)
     if authorization != "Bearer fake-token-123":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
@@ -939,7 +939,7 @@ def amtech_status(_: str = Depends(require_token)):
     import time
 
     token, expiry, user_id, branches = load_token()
-
+    print(token)
     if not token or not user_id:
         return {
             "connected": False,
@@ -947,7 +947,7 @@ def amtech_status(_: str = Depends(require_token)):
         }
 
     valid, fetched_branches = is_token_valid(token, user_id)
-
+    print(valid)
     return {
         "connected": bool(valid and expiry > time.time()),
         "user_id": user_id,
@@ -955,6 +955,14 @@ def amtech_status(_: str = Depends(require_token)):
         "expires_at": expiry,
         "expires_in_seconds": int(expiry - time.time()) if expiry else None
     }
+
+
+@router.post("/amtech/reconnect")
+def reconnect(_: str = Depends(require_token)):
+    from app.integrations.amtech_auth import authenticate
+    authenticate()
+    return {"status": "reconnected"}
+
 
 @router.get("/health")
 def health_check():
