@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { isLoggedIn, logout } from "../lib/auth";
 import { apiFetch } from "../lib/api";
-import AdmissionForms from "./AdmissionForms";
-import Aadhaars from "./Aadhaars";
-import TransferCerts from "./TransferCerts";
-import "./dashboard.css";
+import AdmissionForms from "./Components/AdmissionForms";
+import Aadhaars from "./Components/Aadhaars";
+import TransferCerts from "./Components/TransferCerts";
+import "./Components/dashboard.css";
+import Files from "./Components/Files";
 
 type FileRow = {
   file_id: number;
@@ -168,48 +169,9 @@ export default function Dashboard() {
         {tab === "tc" && <TransferCerts />}
       </div>
         {tab === "files" && (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Doc Type</th>
-                <th>OCR</th>
-                <th>Extraction</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {files.map((f) => (
-                <tr key={f.file_id}>
-                  
-                  <td>{f.display_name}</td>
-                  <td>{f.doc_type}</td>
-                  <td>{f.ocr_done ? "✓" : "⏳"}</td>
-                  <td>{f.extraction_done ? "✓" : "⛔"}</td>
-                  <td>
-                    {(
-                      <button className="btn"
-                        onClick={async () => {
-                          if (!confirm("Delete this file?")) return;
+            <Files files={files} reloadFiles={loadFiles} />
+          )}
 
-                          await apiFetch(
-                            `http://localhost:8000/api/files/${f.file_id}`,
-                            { method: "DELETE" }
-                          );
-
-                          loadFiles();
-                        }}
-                      >
-                        Delete
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-
-        </table>
-      )}
       <br />
       <button
         className="btn"

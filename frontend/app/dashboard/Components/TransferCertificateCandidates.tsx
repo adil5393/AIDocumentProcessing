@@ -2,7 +2,7 @@
 
 import SignalBadge from "./SignalBadge";
 import { useEffect, useState } from "react";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "../../lib/api";
 
 type TCCandidate = {
   sr: string;
