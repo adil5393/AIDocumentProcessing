@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "../../lib/api";
 import EditableCell from './EditableCell';
 
 
@@ -179,7 +179,6 @@ export default function AdmissionForms() {
                 <th>Aadhaar</th>
                 <th>Last School</th>
                 <th>Created At</th>
-                <th>Action</th>
               </tr>
             </thead>
 
@@ -261,8 +260,7 @@ export default function AdmissionForms() {
 
                   <td>{r.aadhaar_number}</td>
                   <td>{r.last_school_attended}</td>
-                  <td>{r.created_at}</td>
-                  <td><button className="btn">Post</button></td>
+                  <td>{r.created_at}</td>                  
                 </tr>
               ))}
             </tbody>

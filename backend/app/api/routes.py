@@ -933,9 +933,28 @@ def login(data: LoginRequest):
         }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@router.get("/status")
-def status():
-    return {"status": "ok"}
+@router.get("/amtech/status")
+def amtech_status(_: str = Depends(require_token)):
+    from app.integrations.amtech_auth import load_token, is_token_valid
+    import time
+
+    token, expiry, user_id, branches = load_token()
+
+    if not token or not user_id:
+        return {
+            "connected": False,
+            "reason": "no_token"
+        }
+
+    valid, fetched_branches = is_token_valid(token, user_id)
+
+    return {
+        "connected": bool(valid and expiry > time.time()),
+        "user_id": user_id,
+        "branches": fetched_branches or branches,
+        "expires_at": expiry,
+        "expires_in_seconds": int(expiry - time.time()) if expiry else None
+    }
 
 @router.get("/health")
 def health_check():

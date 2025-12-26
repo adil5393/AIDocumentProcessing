@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch } from "../lib/api";
+import { apiFetch } from "../../lib/api";
 import React from "react";
 import TransferCertificateCandidates from "./TransferCertificateCandidates";
 
