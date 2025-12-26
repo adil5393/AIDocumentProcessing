@@ -8,6 +8,7 @@ import Aadhaars from "./Components/Aadhaars";
 import TransferCerts from "./Components/TransferCerts";
 import "./Components/dashboard.css";
 import Files from "./Components/Files";
+import AmtechPanel from "./Components/AmtechPanel";
 
 type FileRow = {
   file_id: number;
@@ -17,7 +18,7 @@ type FileRow = {
   ocr_done: boolean;
   extraction_done: boolean;
 };
-type Tab = "files" | "admission" | "aadhaar" | "tc" ;
+type Tab = "files" | "admission" | "aadhaar" | "tc" | "amtech";
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
@@ -151,7 +152,7 @@ export default function Dashboard() {
         <button onClick={() => setTab("admission")}>Admission Forms</button>
         <button onClick={() => setTab("aadhaar")}>Aadhaar</button>
         <button onClick={() => setTab("tc")}>Transfer Certificates</button>
-
+        <button onClick={() => setTab("amtech")}>Amtech</button>
       </div>
 
       <div>
@@ -167,11 +168,11 @@ export default function Dashboard() {
           />
         )}
         {tab === "tc" && <TransferCerts />}
+        {tab === "amtech" && <AmtechPanel />}
       </div>
         {tab === "files" && (
             <Files files={files} reloadFiles={loadFiles} />
           )}
-
       <br />
       <button
         className="btn"
