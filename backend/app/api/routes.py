@@ -16,7 +16,7 @@ from typing import Dict, Any
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from io import BytesIO
-
+from dotenv import load_dotenv
 import threading, json
 
 import os
@@ -35,7 +35,10 @@ class SRDeclareRequest(BaseModel):
 
 
 def require_token(authorization: str = Header(None)):
-    print(authorization)
+
+    if DEV_MODE:
+        return
+
     if authorization != "Bearer fake-token-123":
         raise HTTPException(status_code=401, detail="Unauthorized")
 

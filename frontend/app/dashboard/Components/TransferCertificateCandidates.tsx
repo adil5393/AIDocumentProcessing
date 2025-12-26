@@ -4,6 +4,8 @@ import SignalBadge from "./SignalBadge";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 type TCCandidate = {
   sr: string;
   total_score: number;
@@ -17,7 +19,7 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
   useEffect(() => {
     const load = async () => {
       const res = await apiFetch(
-        `http://localhost:8000/api/tc/${docId}/candidates`
+        `${API_BASE}/api/tc/${docId}/candidates`
       );
       const data = await res.json();
       setRows(data);
@@ -55,7 +57,7 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
                 if (!confirm("Confirm this Transfer Certificate match?")) return;
 
                 await apiFetch(
-                  `http://localhost:8000/api/tc/${docId}/confirm`,
+                  `${API_BASE}/api/tc/${docId}/confirm`,
                   {
                     method: "POST",
                     body: JSON.stringify({

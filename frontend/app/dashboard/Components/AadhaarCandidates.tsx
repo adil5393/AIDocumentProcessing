@@ -4,6 +4,7 @@ import SignalBadge from "./SignalBadge";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import './dashboard.css';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarCandidate = {
   sr: string;
@@ -20,7 +21,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
   useEffect(() => {
     const load = async () => {
       const res = await apiFetch(
-        `http://localhost:8000/api/aadhaar/${docId}/candidates`
+        `${API_BASE}/api/aadhaar/${docId}/candidates`
       );
       const data = await res.json();
       setRows(data);
@@ -62,7 +63,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
                   if (!confirm("Confirm this Aadhaar match?")) return;
 
                   await apiFetch(
-                    `http://localhost:8000/api/aadhaar/${docId}/confirm`,
+                    `${API_BASE}/api/aadhaar/${docId}/confirm`,
                     {
                       method: "POST",
                       body: JSON.stringify({

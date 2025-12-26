@@ -3,10 +3,14 @@ import mimetypes
 from dotenv import load_dotenv
 import os
 
+load_dotenv()
+
 PROJECT_ID = os.getenv("PROJECT_ID")
 LOCATION = os.getenv("LOCATION")
 PROCESSOR_ID = os.getenv("PROCESSOR_ID")
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")  # fallback
+
+print(PROJECT_ID,LOCATION,PROCESSOR_ID,UPLOADS_DIR)
 
 processor_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/processors/{PROCESSOR_ID}"
 client = documentai.DocumentProcessorServiceClient()

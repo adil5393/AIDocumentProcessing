@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import TransferCertificateCandidates from "./TransferCertificateCandidates";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
   doc_id: number;          // ✅ important
@@ -22,7 +23,7 @@ export default function TransferCerts() {
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   async function runPendingLookups() {
     const res = await apiFetch(
-      "http://localhost:8000/api/tc/lookup/pending",
+      `${API_BASE}/api/tc/lookup/pending`,
       { method: "POST" }
     );
 
@@ -30,24 +31,24 @@ export default function TransferCerts() {
     alert(`Processed ${data.processed_count} Transfer Certificate(s)`);
 
     const refreshed = await apiFetch(
-      "http://localhost:8000/api/transfer-certificates"
+      `${API_BASE}/api/transfer-certificates`
     );
     setRows(await refreshed.json());
   }
   useEffect(() => {
-    apiFetch("http://localhost:8000/api/transfer-certificates")
+    apiFetch(`${API_BASE}/api/transfer-certificates`)
       .then(res => res.json())
       .then(setRows);
   }, []);
     async function rerunLookup(docId: number) {
 
     await apiFetch(
-      `http://localhost:8000/api/tc/${docId}/lookup?force=true`,
+      `${API_BASE}/api/tc/${docId}/lookup?force=true`,
       { method: "POST" }
     );
 
     // refresh list
-    const res = await apiFetch("http://localhost:8000/api/transfer-certificates");
+    const res = await apiFetch(`${API_BASE}/api/transfer-certificates`);
     setRows(await res.json());
   }
 

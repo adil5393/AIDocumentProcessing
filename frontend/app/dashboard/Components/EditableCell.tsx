@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 export default function EditableCell({
   value,
   sr,
@@ -26,7 +28,7 @@ export default function EditableCell({
 
     try {
       await apiFetch(
-        `http://localhost:8000/api/admission-forms/${sr}`,
+        `${API_BASE}/api/admission-forms/${sr}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
