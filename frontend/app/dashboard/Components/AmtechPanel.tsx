@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 export default function AmtechPanel() {
   const [status, setStatus] = useState<any | null>(null);
   const [loading, setLoading] = useState(false);
@@ -13,7 +15,7 @@ export default function AmtechPanel() {
     setError(null);
 
     try {
-      const res = await apiFetch("http://localhost:8000/api/amtech/status");
+      const res = await apiFetch(`${API_BASE}/api/amtech/status`);
       if (!res.ok) throw new Error("Failed to fetch Amtech status");
       setStatus(await res.json());
     } catch (e: any) {
@@ -24,7 +26,7 @@ export default function AmtechPanel() {
   };
 
   const reconnect = async () => {
-    await apiFetch("http://localhost:8000/api/amtech/reconnect", {
+    await apiFetch(`${API_BASE}/api/amtech/reconnect`, {
       method: "POST",
     });
     loadStatus();

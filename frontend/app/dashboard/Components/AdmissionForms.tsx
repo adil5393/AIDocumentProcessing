@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import EditableCell from './EditableCell';
-
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function AdmissionForms() {
   /* ------------------ STATE ------------------ */
@@ -12,14 +12,14 @@ export default function AdmissionForms() {
 
   /* ------------------ FETCHERS ------------------ */
   function fetchAdmissionForms() {
-    apiFetch("http://localhost:8000/api/admission-forms")
+    apiFetch(`${API_BASE}/api/admission-forms`)
       .then(res => res.json())
       .then(setRows)
       .catch(console.error);
   }
 
   function fetchReservedSRs() {
-    apiFetch("http://localhost:8000/api/reserved")
+    apiFetch(`${API_BASE}/api/reserved`)
       .then(res => res.json())
       .then(setReservedSRs)
       .catch(console.error);
@@ -36,7 +36,7 @@ export default function AdmissionForms() {
 
   async function cleanupExpiredSRs() {
     const res = await apiFetch(
-      "http://localhost:8000/api/cleanup",
+      `${API_BASE}/api/cleanup`,
       { method: "DELETE" }
     );
 
@@ -56,7 +56,7 @@ export default function AdmissionForms() {
     }
 
     const res = await apiFetch(
-      "http://localhost:8000/api/declare",
+      `${API_BASE}/api/declare`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },

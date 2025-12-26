@@ -9,6 +9,7 @@ import TransferCerts from "./Components/TransferCerts";
 import "./Components/dashboard.css";
 import Files from "./Components/Files";
 import AmtechPanel from "./Components/AmtechPanel";
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
   file_id: number;
@@ -50,7 +51,7 @@ export default function Dashboard() {
       });
   }
   const loadFiles = async () => {
-    const res = await apiFetch("http://localhost:8000/api/files");
+    const res = await apiFetch(`${API_BASE}/api/files`);
     const data = await res.json();
     setFiles(data);
   };
@@ -67,7 +68,7 @@ export default function Dashboard() {
   if (!running) return;
 
   const interval = setInterval(async () => {
-    const res = await apiFetch("http://localhost:8000/api/files");
+    const res = await apiFetch(`${API_BASE}/api/files`);
     const data: FileRow[] = await res.json();
 
     setFiles(data);
@@ -98,7 +99,7 @@ export default function Dashboard() {
     setStatus("Uploading...");
 
     try {
-      const res = await apiFetch("http://localhost:8000/api/upload", {
+      const res = await apiFetch(`${API_BASE}/api/upload`, {
         method: "POST",
         body: formData,
       });
@@ -120,7 +121,7 @@ export default function Dashboard() {
     setStatus("Running OCR + extraction...");
     setRunning(true);
 
-    await apiFetch("http://localhost:8000/api/ocr/run", {
+    await apiFetch(`${API_BASE}/api/ocr/run`, {
       method: "POST",
     });
 

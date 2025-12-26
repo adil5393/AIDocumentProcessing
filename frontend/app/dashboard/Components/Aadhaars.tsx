@@ -4,7 +4,7 @@ import AadhaarLookupCandidates from "./AadhaarCandidates";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
-
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarRow = {
   doc_id: number;
@@ -26,14 +26,14 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
   
 
   function fetchAadhaarDocuments() {
-    apiFetch("http://localhost:8000/api/aadhaar-documents")
+    apiFetch(`${API_BASE}/api/aadhaar-documents`)
       .then(res => res.json())
       .then(setRows)
       .catch(console.error);
   }
 async function runPendingLookups() {
   const res = await apiFetch(
-    "http://localhost:8000/api/aadhaar/lookup/pending",
+    `${API_BASE}/api/aadhaar/lookup/pending`,
     { method: "POST" }
   );
 
@@ -45,7 +45,7 @@ async function runPendingLookups() {
 
   async function rerunLookup(docId: number) {
     await apiFetch(
-      `http://localhost:8000/api/aadhaar/${docId}/lookup?force=true`,
+      `${API_BASE}/api/aadhaar/${docId}/lookup?force=true`,
       { method: "POST" }
     );
     fetchAadhaarDocuments();

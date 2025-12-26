@@ -3,6 +3,8 @@
 import { apiFetch } from "../../lib/api";
 import "./dashboard.css";
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
 type FileRow = {
   file_id: number;
   file_path: string;
@@ -43,7 +45,7 @@ export default function Files({ files, reloadFiles }: FilesProps) {
                   if (!confirm("Delete this file?")) return;
 
                   await apiFetch(
-                    `http://localhost:8000/api/files/${f.file_id}`,
+                    `${API_BASE}/api/files/${f.file_id}`,
                     { method: "DELETE" }
                   );
 
