@@ -1,71 +1,80 @@
 "use client";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { isLoggedIn } from "../lib/auth";
-
-
+import './login.css'
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function LoginPage() {
-    useEffect(() => {
-    if (isLoggedIn()) {
-        window.location.href = "/dashboard";
-    }
-    }, []);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isLoggedIn()) {
+      window.location.replace("/dashboard");
+    }
+  }, []);
 
   const handleLogin = async () => {
-  setError("");
-
-  try {
-    const res = await fetch("http://192.168.1.11:8000/api/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.message || "Login failed");
+    if (!username || !password) {
+      setError("Username and password required");
       return;
     }
 
-    // ✅ SAVE TOKEN
-    localStorage.setItem("token", data.access_token);
+    setError("");
+    setLoading(true);
 
-    // ✅ REDIRECT
-    window.location.href = "/dashboard";
+    try {
+      const res = await fetch(`${API_BASE}/api/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
 
-  } catch (err) {
-    setError("Server not reachable");
-  }
-};
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.message || "Invalid credentials");
+        setLoading(false);
+        return;
+      }
+
+      localStorage.setItem("token", data.access_token);
+      window.location.replace("/dashboard");
+
+    } catch {
+      setError("Server not reachable");
+      setLoading(false);
+    }
+  };
 
   return (
-    <div style={{ maxWidth: 400, margin: "100px auto" }}>
-      <h2>Login</h2>
+    <div className="login-container">
+      <h2>Student AI System</h2>
 
       <input
         placeholder="Username"
         value={username}
         onChange={(e) => setUsername(e.target.value)}
+        disabled={loading}
       />
-      <br /><br />
 
       <input
         type="password"
         placeholder="Password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
+        disabled={loading}
+        onKeyDown={(e) => e.key === "Enter" && handleLogin()}
       />
-      <br /><br />
 
-      <button onClick={handleLogin}>Login</button>
+      <button onClick={handleLogin} disabled={loading}>
+        {loading ? "Logging in..." : "Login"}
+      </button>
 
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      {error && <div className="login-error">{error}</div>}
     </div>
   );
 }

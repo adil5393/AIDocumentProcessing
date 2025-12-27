@@ -1,0 +1,113 @@
+.dashboard-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #e5e7eb;
+  margin-bottom: 14px;
+}
+
+/* ACTION BAR */
+.action-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #020617;
+  border: 1px solid #1e293b;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.file-picker {
+  padding: 8px 12px;
+  background: #020617;
+  border: 1px dashed #334155;
+  color: #e5e7eb;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.file-picker input {
+  display: none;
+}
+
+.status-text {
+  margin-left: auto;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* BUTTONS */
+.btn {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.btn.primary {
+  background: #2563eb;
+  color: white;
+}
+
+.btn.secondary {
+  background: #1e293b;
+  color: #e5e7eb;
+}
+
+.btn:hover {
+  opacity: 0.9;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.tab {
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.tab.active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: white;
+}
+.action-right {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+}
+
+/* GHOST BUTTON */
+.btn.ghost {
+  background: transparent;
+  border: 1px solid #1e293b;
+  color: #94a3b8;
+}
+
+.btn.ghost:hover {
+  background: #020617;
+  color: #e5e7eb;
+}
+
+/* DANGER BUTTON */
+.btn.danger {
+  background: transparent;
+  border: 1px solid #7f1d1d;
+  color: #f87171;
+}
+
+.btn.danger:hover {
+  background: #7f1d1d;
+  color: white;
+}
