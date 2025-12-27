@@ -10,6 +10,7 @@ import "./Components/dashboard.css";
 import Files from "./Components/Files";
 import AmtechPanel from "./Components/AmtechPanel";
 import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
+import './Components/header.css'
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
@@ -153,35 +154,53 @@ useEffect(() => {
 
   return (
     <div className="dashboard">
-      <h1>Dashboard</h1>
+      <h1 className="dashboard-title">Dashboard</h1>
 
-      <input
-        type="file"
-        multiple
-        onChange={(e) => {
-          if (e.target.files) {
-            setSelectedFiles(Array.from(e.target.files));
-          }
-        }}
-      />
-      <br /><br />
+{/* ACTION BAR */}
+<div className="action-bar">
+  <label className="file-picker">
+    <input
+      type="file"
+      multiple
+      onChange={(e) => {
+        if (e.target.files) {
+          setSelectedFiles(Array.from(e.target.files));
+        }
+      }}
+    />
+    📂 Choose Files
+  </label>
 
-      <button onClick={handleUpload}>Upload</button>
-      <button className="btn"   onClick={runPipeline} style={{ marginLeft: 10 }}>
-        Run OCR + Extraction
-      </button>
+  <button className="btn primary" onClick={handleUpload}>
+    ⬆ Upload
+  </button>
 
-      <p>{status}</p>
+  <button className="btn secondary" onClick={runPipeline}>
+    ⚙ Run OCR + Extraction
+  </button>
 
-      <hr />
+  <span className="status-text">{status}</span>
+</div>
 
-      <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
-        <button onClick={() => setTab("files")}>Files</button>
-        <button onClick={() => setTab("admission")}>Admission Forms</button>
-        <button onClick={() => setTab("aadhaar")}>Aadhaar</button>
-        <button onClick={() => setTab("tc")}>Transfer Certificates</button>
-        <button onClick={() => setTab("amtech")}>Amtech</button>
-      </div>
+{/* TABS */}
+<div className="tabs">
+  <button className={`tab ${tab === "files" ? "active" : ""}`} onClick={() => setTab("files")}>
+    Files
+  </button>
+  <button className={`tab ${tab === "admission" ? "active" : ""}`} onClick={() => setTab("admission")}>
+    Admission Forms
+  </button>
+  <button className={`tab ${tab === "aadhaar" ? "active" : ""}`} onClick={() => setTab("aadhaar")}>
+    Aadhaar
+  </button>
+  <button className={`tab ${tab === "tc" ? "active" : ""}`} onClick={() => setTab("tc")}>
+    Transfer Certificates
+  </button>
+  <button className={`tab ${tab === "amtech" ? "active" : ""}`} onClick={() => setTab("amtech")}>
+    Amtech
+  </button>
+</div>
+
 
       <div>
         {layoverFile &&  (
@@ -221,14 +240,15 @@ useEffect(() => {
           />
         )}
       <br />
-      <button
-        className="btn"
-        onClick={exportExcel}
-        style={{ marginBottom: 12 }}
-      >
-        📥 Export Student Comparison (Excel)
-      </button>
-      <button className="btn" onClick={logout}>Logout</button>
+       <div className="action-right">
+        <button className="btn ghost" onClick={exportExcel}>
+          📥 Export Excel
+        </button>
+
+        <button className="btn danger" onClick={logout}>
+          Logout
+        </button>
+      </div>
     </div>
   );
 }
