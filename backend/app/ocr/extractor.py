@@ -78,6 +78,7 @@ HARD RULES (MANDATORY)
 6. If a 12-digit number is found near "Mobile" or "Phone", IGNORE it.
 8. Use "spen_number" for SPEN / PEN interchangeably.
 9. Use Arabic numerals only (Always convert Roman numerals).
+10. Give values of class only as integers wrapped as text.
 NOTE:
 Aadhaar numbers may be written with spaces or separators near "Aadhaar No. (Not mandatory) (Attach proof)" (e.g. 1234 5678 9012, 1.2.34.567.8 9 0.12).
 Normalize them to a 12-digit string WITHOUT spaces.
@@ -105,7 +106,7 @@ Fields:
 
 Rules:
 - Aadhaar number must be exactly 12 digits or null
-- Extract relation_type ONLY if explicitly present in text (S/O, D/O, W/O)
+- Extract relation_type ONLY if explicitly present in text (S/O, D/O, W/O, C/O)
 - Extract related_name ONLY if it appears next to relation_type
 - Do NOT infer or guess relationships
 - Do NOT decide whether Aadhaar belongs to student or parent

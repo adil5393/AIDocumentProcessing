@@ -9,6 +9,7 @@ import TransferCerts from "./Components/TransferCerts";
 import "./Components/dashboard.css";
 import Files from "./Components/Files";
 import AmtechPanel from "./Components/AmtechPanel";
+import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
@@ -17,20 +18,23 @@ type FileRow = {
   display_name: string;
   doc_type: string;
   ocr_done: boolean;
+  extracted_raw: Record<string, any> | null;
   extraction_done: boolean;
+  extraction_error: string | null;
 };
 type Tab = "files" | "admission" | "aadhaar" | "tc" | "amtech";
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
   const [tab, setTab] = useState<Tab>("files");
-  const [file, setFile] = useState<File | null>(null);
   const [status, setStatus] = useState("");
-  const [files, setFiles] = useState<FileRow[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileRow[]>([]);
+  const [layoverFile, setLayoverFile] = useState<FileRow | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
 
   function exportExcel() {
-    apiFetch("http://localhost:8000/api/export/student-documents.xlsx")
+    apiFetch(`${API_BASE}/api/export/student-documents.xlsx`)
       .then(res => {
         if (!res.ok) throw new Error("Export failed");
         return res.blob();
@@ -52,8 +56,8 @@ export default function Dashboard() {
   }
   const loadFiles = async () => {
     const res = await apiFetch(`${API_BASE}/api/files`);
-    const data = await res.json();
-    setFiles(data);
+    const data: FileRow[] = await res.json();
+    setUploadedFiles(data);
   };
 
   useEffect(() => {
@@ -64,14 +68,14 @@ export default function Dashboard() {
 
     loadFiles();
   }, []);
-  useEffect(() => {
+ useEffect(() => {
   if (!running) return;
 
   const interval = setInterval(async () => {
     const res = await apiFetch(`${API_BASE}/api/files`);
     const data: FileRow[] = await res.json();
 
-    setFiles(data);
+    setUploadedFiles(data);
 
     const allDone =
       data.length > 0 &&
@@ -86,46 +90,64 @@ export default function Dashboard() {
 
   return () => clearInterval(interval);
 }, [running]);
+useEffect(() => {
+  console.log("layoverFile", layoverFile);
+}, [layoverFile]);
 
   const handleUpload = async () => {
-    if (!file) {
-      setStatus("No file selected");
+  if (selectedFiles.length === 0) {
+    setStatus("No files selected");
+    return;
+  }
+
+  const formData = new FormData();
+  selectedFiles.forEach(file => {
+    formData.append("files", file);
+  });
+
+  setStatus(`Uploading ${selectedFiles.length} files...`);
+
+  try {
+    const res = await apiFetch(`${API_BASE}/api/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      setStatus("Upload failed");
       return;
     }
 
-    const formData = new FormData();
-    formData.append("file", file);
-
-    setStatus("Uploading...");
-
-    try {
-      const res = await apiFetch(`${API_BASE}/api/upload`, {
-        method: "POST",
-        body: formData,
-      });
-
-      if (!res.ok) {
-        setStatus("Upload failed");
-        return;
-      }
-
-      setStatus("Upload successful ✅");
-      setFile(null);
-      loadFiles();
-    } catch {
-      setStatus("Upload error");
-    }
-  };
+    setStatus("Upload successful ✅");
+    setSelectedFiles([]);
+    loadFiles();
+  } catch {
+    setStatus("Upload error");
+  }
+};
 
   const runPipeline = async () => {
     setStatus("Running OCR + extraction...");
     setRunning(true);
 
-    await apiFetch(`${API_BASE}/api/ocr/run`, {
-      method: "POST",
-    });
+    try {
+      const res = await apiFetch(`${API_BASE}/api/ocr/run`, {
+        method: "POST",
+      });
 
-    // start polling
+      if (!res.ok) {
+        const err = await res.text();
+        setRunning(false);
+        setStatus(`Pipeline failed ❌: ${err}`);
+        return;
+      }
+
+      setStatus("Pipeline started 🚀");
+
+    } catch (e) {
+      setRunning(false);
+      setStatus("Pipeline error ❌");
+    }
   };
 
 
@@ -135,7 +157,12 @@ export default function Dashboard() {
 
       <input
         type="file"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
+        multiple
+        onChange={(e) => {
+          if (e.target.files) {
+            setSelectedFiles(Array.from(e.target.files));
+          }
+        }}
       />
       <br /><br />
 
@@ -157,6 +184,21 @@ export default function Dashboard() {
       </div>
 
       <div>
+        {layoverFile &&  (
+          <AdmissionLayoverModal
+            fileId={layoverFile.file_id}
+            initialData={layoverFile.extracted_raw ?? {}}
+            error={layoverFile.extraction_error}
+            onConfirm={(data) => {
+              // backend confirm endpoint
+              console.log("CONFIRM ADMISSION", data);
+            }}
+            onReject={() => {
+              console.log("REJECT ADMISSION");
+            }}
+            onClose={() => setLayoverFile(null)}
+          />
+        )}
         {tab === "admission" && (
           <AdmissionForms />
         )}
@@ -172,8 +214,12 @@ export default function Dashboard() {
         {tab === "amtech" && <AmtechPanel />}
       </div>
         {tab === "files" && (
-            <Files files={files} reloadFiles={loadFiles} />
-          )}
+          <Files
+            files={uploadedFiles}
+            reloadFiles={loadFiles}
+            openLayover={(file) => setLayoverFile(file)}
+          />
+        )}
       <br />
       <button
         className="btn"

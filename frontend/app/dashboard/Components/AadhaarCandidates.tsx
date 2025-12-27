@@ -63,7 +63,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
                   if (!confirm("Confirm this Aadhaar match?")) return;
 
                   await apiFetch(
-                    `${API_BASE}/api/aadhaar/${docId}/confirm`,
+                    `${API_BASE}/api/aadhaar/${docId}/${r.sr}/confirm`,
                     {
                       method: "POST",
                       body: JSON.stringify({

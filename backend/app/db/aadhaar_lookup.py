@@ -56,7 +56,7 @@ def run_aadhaar_lookup(db, doc_id: int):
     # -------------------------
     # EXACT AADHAAR (HARD SIGNAL)
     # -------------------------
-    if aadhaar_no:
+    if aadhaar_no and aadhaar_age <= 18:
         rows = db.execute(
             text("""
                 SELECT sr,
@@ -106,7 +106,7 @@ def run_aadhaar_lookup(db, doc_id: int):
             # ---- STUDENT ----
             if aadhaar_age is None or aadhaar_age < 18:
                 signals = {
-                    "relation_match": relation_type in ("S/O", "D/O"),
+                    "relation_match": relation_type in ("S/O", "D/O", "C/O"),
                     "age_match": aadhaar_age is not None and aadhaar_age < 18,
                     "student_name_score": name_similarity(aadhaar_tokens, student_tokens),
                     "related_name_score": name_similarity(related_tokens, father_tokens),

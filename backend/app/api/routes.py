@@ -17,7 +17,9 @@ from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from io import BytesIO
 from dotenv import load_dotenv
+from typing import List
 import threading, json
+import mimetypes
 
 import os
 import uuid
@@ -25,6 +27,9 @@ import uuid
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
 router = APIRouter(prefix="/api")
+
+class ReassessPayload(BaseModel):
+    extracted_raw: Dict[str, Any]
 
 class LoginRequest(BaseModel):
     username: str
@@ -59,6 +64,8 @@ def list_files(
             doc_type,
             ocr_done,
             extraction_done,
+            extraction_error,
+            extracted_raw,
             display_name
         FROM uploaded_files
         ORDER BY created_at DESC
@@ -71,7 +78,10 @@ def list_files(
             "doc_type": r.doc_type,
             "ocr_done": r.ocr_done,
             "extraction_done": r.extraction_done,
+            "extraction_error":r.extraction_error,
+            "extracted_raw":r.extracted_raw,
             "display_name":r.display_name
+            
         }
         for r in rows
     ]
@@ -193,34 +203,43 @@ def run_pipeline():
     return {"status": "started"}
 
 @router.post("/upload")
-def upload_file(
-    file: UploadFile = File(...),
+def upload_files(
+    files: List[UploadFile] = File(...),
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
-    ext = os.path.splitext(file.filename)[1]
-    filename = f"{uuid.uuid4()}{ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
+    saved_files = []
 
-    with open(file_path, "wb") as f:
-        f.write(file.file.read())
+    for file in files:
+        ext = os.path.splitext(file.filename)[1]
+        filename = f"{uuid.uuid4()}{ext}"
+        file_path = os.path.join(UPLOAD_DIR, filename)
 
-    # infer doc_type later if needed
-    doc_type = "unknown"
+        with open(file_path, "wb") as f:
+            f.write(file.file.read())
 
-    db.execute(
-        text("""
-            INSERT INTO uploaded_files (file_path, doc_type)
-            VALUES (:file_path, :doc_type)
-        """),
-        {"file_path": filename, "doc_type": doc_type}
-    )
+        db.execute(
+            text("""
+                INSERT INTO uploaded_files (file_path, doc_type)
+                VALUES (:file_path, :doc_type)
+            """),
+            {
+                "file_path": filename,
+                "doc_type": "unknown"
+            }
+        )
+
+        saved_files.append({
+            "original_name": file.filename,
+            "saved_as": filename,
+            "content_type": file.content_type
+        })
+
     db.commit()
 
     return {
-        "original_name": file.filename,
-        "saved_as": filename,
-        "content_type": file.content_type,
+        "uploaded": len(saved_files),
+        "files": saved_files
     }
 
 @router.delete("/files/{file_id}")
@@ -584,7 +603,7 @@ def run_pending_tc_lookups(
 
     return {"processed_count": len(rows)}
 
-@router.post("/aadhaar/{doc_id}/confirm")
+@router.post("/aadhaar/{doc_id}/{sr}/confirm")
 def confirm_aadhaar_match(
     doc_id: int,
     payload: dict,
@@ -623,49 +642,90 @@ def confirm_aadhaar_match(
     method = payload.get("method", "manual")
 
     # 1️⃣ Insert final match
-    db.execute(
-        text("""
-            INSERT INTO aadhaar_matches (
-                sr_number,
-                aadhaar_doc_id,
-                match_role,
-                match_score,
-                match_method,
-                is_confirmed,
-                confirmed_on
-            )
-            VALUES (
-                :sr, :doc_id, :role, :score, :method, true, now()
-            )
-        """),
-        {
-            "sr": sr,
-            "doc_id": doc_id,
-            "role": role,
-            "score": int(score * 100),  # normalize
-            "method": method,
-        }
-    )
+    if role=="student":
+        db.execute(
+            text("""
+                INSERT INTO aadhaar_matches (
+                    sr_number,
+                    aadhaar_doc_id,
+                    match_role,
+                    match_score,
+                    match_method,
+                    is_confirmed,
+                    confirmed_on
+                )
+                VALUES (
+                    :sr, :doc_id, :role, :score, :method, true, now()
+                )
+            """),
+            {
+                "sr": sr,
+                "doc_id": doc_id,
+                "role": role,
+                "score": int(score * 100),  # normalize
+                "method": method,
+            }
+        )
 
-    # 2️⃣ Remove all candidates for this Aadhaar doc
-    db.execute(
-        text("""
-            DELETE FROM aadhaar_lookup_candidates
-            WHERE doc_id = :doc_id
-        """),
-        {"doc_id": doc_id}
-    )
+        # 2️⃣ Remove all candidates for this Aadhaar doc
+        db.execute(
+            text("""
+                DELETE FROM aadhaar_lookup_candidates
+                WHERE doc_id = :doc_id 
+            """),
+            {"doc_id": doc_id}
+        )
 
-    # 3️⃣ Update Aadhaar document status
-    db.execute(
-        text("""
-            UPDATE aadhaar_documents
-            SET lookup_status = 'confirmed',
-                lookup_checked_at = now()
-            WHERE doc_id = :doc_id
-        """),
-        {"doc_id": doc_id}
-    )
+        # 3️⃣ Update Aadhaar document status
+        db.execute(
+            text("""
+                UPDATE aadhaar_documents
+                SET lookup_status = 'confirmed',
+                    lookup_checked_at = now()
+                WHERE doc_id = :doc_id
+            """),
+            {"doc_id": doc_id}
+        )
+    elif role in ("mother","father"):
+        db.execute(
+            text("""
+                INSERT INTO aadhaar_matches (
+                    sr_number,
+                    aadhaar_doc_id,
+                    match_role,
+                    match_score,
+                    match_method,
+                    is_confirmed,
+                    confirmed_on
+                )
+                VALUES (
+                    :sr, :doc_id, :role, :score, :method, true, now()
+                )
+                ON CONFLICT (sr_number, aadhaar_doc_id)
+                DO UPDATE SET
+                    is_confirmed = true,
+                    confirmed_on = now()
+            """),
+            {
+                "sr": sr,
+                "doc_id": doc_id,
+                "role": role,
+                "score": int(score * 100),
+                "method": method,
+            }
+        )
+        db.execute(
+            text("""
+                DELETE FROM aadhaar_lookup_candidates
+                WHERE doc_id = :doc_id
+                AND sr = :sr
+            """),
+            {
+                "doc_id": doc_id,
+                "sr": sr,
+            }
+        )
+
     update_sql = ROLE_UPDATE_SQL.get(role)
     if update_sql:
         db.execute(
@@ -974,3 +1034,59 @@ def health_check():
 @router.get("/version")
 def version():
     return {"version": "0.1.0"}
+
+@router.get("files/{file_id}/layover")
+def layover():
+    pass
+
+
+@router.post("/files/{file_id}/reassess")
+def reassess_file(
+    file_id: int,
+    payload: ReassessPayload,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    db.execute(text("""
+        UPDATE uploaded_files
+        SET
+            extracted_raw = :raw,
+            extraction_error = NULL,
+            extraction_done = false
+        WHERE file_id = :file_id
+    """), {
+        "raw": json.dumps(payload.extracted_raw),
+        "file_id": file_id
+    })
+
+    db.commit()
+
+    return {"status": "ok"}
+    
+@router.get("/files/{file_id}/preview")
+def preview_file(file_id: int, db: Session = Depends(get_db)):
+
+    result = db.execute(
+        text("SELECT file_path FROM uploaded_files WHERE file_id = :id"),
+        {"id": file_id}
+    ).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_path = os.path.join("uploads", result.file_path)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File missing")
+
+    def iterfile():
+        with open(file_path, "rb") as f:
+            yield from f
+
+    return StreamingResponse(
+        iterfile(),
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": "inline"
+        }
+    )
