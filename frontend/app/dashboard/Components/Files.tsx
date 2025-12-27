@@ -5,21 +5,25 @@ import "./dashboard.css";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
+type FilesProps = {
+  files: FileRow[];
+  reloadFiles: () => void;
+  openLayover: (file: FileRow) => void;
+};
+
 type FileRow = {
   file_id: number;
   file_path: string;
   display_name: string;
   doc_type: string;
   ocr_done: boolean;
+  extracted_raw: Record<string, any> | null;
   extraction_done: boolean;
+  extraction_error: string | null;
 };
 
-type FilesProps = {
-  files: FileRow[];
-  reloadFiles: () => void;
-};
-
-export default function Files({ files, reloadFiles }: FilesProps) {
+export default function Files({ files,reloadFiles,openLayover,
+}: FilesProps) {
   return (
     <table className="table">
       <thead>
@@ -37,7 +41,20 @@ export default function Files({ files, reloadFiles }: FilesProps) {
             <td>{f.display_name}</td>
             <td>{f.doc_type}</td>
             <td>{f.ocr_done ? "✓" : "⏳"}</td>
-            <td>{f.extraction_done ? "✓" : "⛔"}</td>
+            <td>
+              {f.extraction_error ? (
+                <button
+                  className="btn"
+                  onClick={() => openLayover(f)}
+                >
+                  ❌ Error
+                </button>
+              ) : f.extraction_done ? (
+                "✓"
+              ) : (
+                "⏳"
+              )}
+            </td>
             <td>
               <button
                 className="btn"

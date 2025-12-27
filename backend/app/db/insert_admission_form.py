@@ -21,6 +21,15 @@ def insert_admission_form(db,file_id, data):
         ).fetchone()
 
         if not sr_row:
+            db.execute(text("""
+                    UPDATE uploaded_files
+                    SET extraction_error = :err
+                    WHERE file_id = :file_id
+                """), {
+                    "err": "No Sr",
+                    "file_id": file_id
+                })
+            db.commit()
             raise HTTPException(
                 status_code=400,
                 detail=f"SR {sr} not declared in system"

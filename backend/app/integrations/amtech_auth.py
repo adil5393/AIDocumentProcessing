@@ -108,5 +108,3 @@ def authenticate():
         return token
 
     raise Exception(f"Auth failed: {response.text}")
-
-authenticate()

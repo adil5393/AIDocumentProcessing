@@ -31,11 +31,11 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
       .then(setRows)
       .catch(console.error);
   }
-async function runPendingLookups() {
-  const res = await apiFetch(
-    `${API_BASE}/api/aadhaar/lookup/pending`,
-    { method: "POST" }
-  );
+  async function runPendingLookups() {
+    const res = await apiFetch(
+      `${API_BASE}/api/aadhaar/lookup/pending`,
+      { method: "POST" }
+    );
 
   const data = await res.json();
   alert(`Processed ${data.processed_count} Aadhaar document(s)`);
