@@ -4,6 +4,7 @@ import AadhaarLookupCandidates from "./AadhaarCandidates";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
+import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarRow = {
@@ -23,7 +24,7 @@ type Props = {
 
 export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
   const [rows, setRows] = useState<AadhaarRow[]>([]);
-  
+  const [refreshKey, setRefreshKey] = useState(0);
 
   function fetchAadhaarDocuments() {
     apiFetch(`${API_BASE}/api/aadhaar-documents`)
@@ -122,7 +123,15 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
             {selectedDocId === r.doc_id && (
               <tr>
                 <td colSpan={8} className="expanded-row">
-                  <AadhaarLookupCandidates docId={r.doc_id} />
+                  <div className="aadhaar-expanded">
+
+                    {/* ✅ Confirmed matches FIRST */}
+                    <AadhaarMatchesConfirmed docId={r.doc_id} refreshKey={refreshKey} />
+
+                    {/* 🔽 Candidates BELOW */}
+                    <AadhaarLookupCandidates docId={r.doc_id} refreshKey={refreshKey} setRefreshKey={setRefreshKey}/>
+
+                  </div>
                 </td>
               </tr>
             )}

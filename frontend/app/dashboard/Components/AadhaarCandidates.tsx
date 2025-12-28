@@ -14,10 +14,10 @@ type AadhaarCandidate = {
   signals: Record<string, any>;
 };
 
-export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
+export default function AadhaarLookupCandidates({ docId,refreshKey,setRefreshKey }: { docId: number; refreshKey:number;setRefreshKey: React.Dispatch<React.SetStateAction<number>>; }) {
   const [rows, setRows] = useState<AadhaarCandidate[]>([]);
   const [loading, setLoading] = useState(true);
-
+  
   useEffect(() => {
     const load = async () => {
       const res = await apiFetch(
@@ -28,7 +28,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
       setLoading(false);
     };
     load();
-  }, [docId]);
+  }, [docId,refreshKey]);
 
   if (loading) return <p>Loading Aadhaar matches…</p>;
   if (!rows.length) return <p>No Aadhaar matches found.</p>;
@@ -74,7 +74,7 @@ export default function AadhaarLookupCandidates({ docId }: { docId: number }) {
                       }),
                     }
                   );
-
+                  setRefreshKey(k => k + 1);
                   alert("Match confirmed");
                 }}
               >

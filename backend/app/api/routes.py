@@ -1090,3 +1090,30 @@ def preview_file(file_id: int, db: Session = Depends(get_db)):
             "Content-Disposition": "inline"
         }
     )
+
+@router.get("/aadhaar/{aadhaar_doc_id}/matches")
+def get_aadhaar_confirmed_matches(
+    aadhaar_doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                m.match_id,
+                m.sr_number        AS sr,
+                a.student_name,
+                m.match_role       AS role,
+                m.match_score,
+                m.match_method,
+                m.confirmed_on
+            FROM aadhaar_matches m
+            JOIN admission_forms a ON a.sr = m.sr_number
+            WHERE m.aadhaar_doc_id = :aadhaar_doc_id
+              AND m.is_confirmed = true
+            ORDER BY m.confirmed_on ASC
+        """),
+        {"aadhaar_doc_id": aadhaar_doc_id},
+    ).mappings().all()
+
+    return rows
