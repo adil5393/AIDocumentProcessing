@@ -9,6 +9,55 @@
 }
 
 /* ===== Tables ===== */
+/* CONFIRMED MATCHES BLOCK */
+.confirmed-block {
+  background: linear-gradient(
+    180deg,
+    #022c22,
+    #021f18
+  );
+  border: 1px solid #065f46;
+  border-radius: 10px;
+  padding: 14px;
+}
+
+/* Header */
+.confirmed-block h4 {
+  color: #34d399;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Table */
+.confirmed-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* Table header */
+.confirmed-table th {
+  background: #022c22;
+  color: #a7f3d0;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid #064e3b;
+}
+
+/* Rows */
+.confirmed-table td {
+  padding: 8px;
+  font-size: 13px;
+  color: #e5fdf5;
+  border-bottom: 1px solid #064e3b;
+}
+
+/* Hover (subtle, not clickable) */
+.confirmed-table tr:hover {
+  background: rgba(16, 185, 129, 0.08);
+}
 
 .table {
   width: 100%;
