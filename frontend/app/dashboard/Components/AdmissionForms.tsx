@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import React from "react";
 import EditableCell from './EditableCell';
+import './sidebar.css'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function AdmissionForms() {
@@ -9,6 +12,8 @@ export default function AdmissionForms() {
   const [reservedSRs, setReservedSRs] = useState<any[]>([]);
   const [srInput, setSrInput] = useState("");
   const [srMsg, setSrMsg] = useState("");
+  const [openPreviewId, setOpenPreviewId] = useState<number | null>(null);
+  const [zoom, setZoom] = useState(1.0);
 
   /* ------------------ FETCHERS ------------------ */
   function fetchAdmissionForms() {
@@ -100,42 +105,31 @@ export default function AdmissionForms() {
       <div style={{ display: "flex", gap: 20 }}>
 
         {/* ================= LEFT PANE ================= */}
-        <div style={{ width: "10%", borderRight: "1px solid #ccc", paddingRight: 10 }}>
-          <h4>Reserved SRs</h4>
+        <div className="sr-sidebar">
+          <h4 className="sr-title">Reserved SRs</h4>
 
           {reservedSRs.length === 0 && (
-            <p style={{ color: "#777" }}>No SRs reserved</p>
+            <p className="sr-muted">No SRs reserved</p>
           )}
 
-          <ul style={{ listStyle: "none", padding: 0 }}>
+          <ul className="sr-list">
             {reservedSRs.map(sr => (
-              <li
-                key={sr.sr_number}
-                style={{
-                  marginBottom: 10,
-                  padding: 6,
-                  border: "1px solid #ddd",
-                  borderRadius: 4
-                }}
-              >
+              <li key={sr.sr_number} className="sr-item">
                 <strong>SR {sr.sr_number}</strong>
                 <br />
-                {/* <small>Branch: {sr.branch_id}</small>
-                <br /> */}
                 <small>Expires in: {timeLeft(sr.expires_at)}</small>
               </li>
             ))}
           </ul>
-          <button
-            onClick={cleanupExpiredSRs}
-            style={{ marginTop: 10, width: "100%" }}
-          >
+
+          <button className="btn ghost" onClick={cleanupExpiredSRs}>
             Cleanup Expired SRs
           </button>
 
-          <hr />
+          <hr className="sr-divider" />
 
-          <h4>Declare / Reserve SR</h4>
+          <h4 className="sr-title">Declare / Reserve SR</h4>
+
           <input
             type="text"
             value={srInput}
@@ -146,13 +140,14 @@ export default function AdmissionForms() {
               }
             }}
             placeholder="Enter SR"
-            style={{ width: "100%", marginBottom: 6 }}
+            className="sr-input"
           />
-          <button onClick={declareSR} style={{ width: "100%" }}>
+
+          <button className="btn primary full" onClick={declareSR}>
             Reserve SR
           </button>
 
-          {srMsg && <p style={{ marginTop: 8 }}>{srMsg}</p>}
+          {srMsg && <p className="sr-msg">{srMsg}</p>}
         </div>
 
         {/* ================= RIGHT PANE ================= */}
@@ -178,92 +173,154 @@ export default function AdmissionForms() {
                 <th>Phone 2</th>
                 <th>Aadhaar</th>
                 <th>Last School</th>
-                <th>Created At</th>
+                <th>Action</th>
               </tr>
             </thead>
 
             <tbody>
-              {rows.map(r => (
-                <tr key={r.sr}>
-                  <td>{r.sr}</td>
-                  <td><EditableCell
-                      value={r.class}
-                      sr={r.sr}
-                      field="class"
-                      onSaved={fetchAdmissionForms}
-                    /></td>
+  {rows.map(r => (
+    <React.Fragment key={r.sr}>
+      <tr>
+        <td>{r.sr}</td>
 
-                  <td>
-                    <EditableCell
-                      value={r.student_name}
-                      sr={r.sr}
-                      field="student_name"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
+        <td>
+          <EditableCell
+            value={r.class}
+            id={r.sr}
+            field="class"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
 
-                  <td>{r.gender}</td>
+        <td>
+          <EditableCell
+            value={r.student_name}
+            id={r.sr}
+            field="student_name"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
 
-                  <td>
-                    <EditableCell
-                      value={r.date_of_birth}
-                      sr={r.sr}
-                      field="date_of_birth"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
+        <td>{r.gender}</td>
 
-                  <td>
-                    <EditableCell
-                      value={r.father_name}
-                      sr={r.sr}
-                      field="father_name"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
+        <td>
+          <EditableCell
+            value={r.date_of_birth}
+            id={r.sr}
+            field="date_of_birth"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
 
-                  <td>
-                    {r.father_aadhaar}
-                  </td>
-                  <td>
-                    <EditableCell
-                      value={r.mother_name}
-                      sr={r.sr}
-                      field="mother_name"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
-                  <td>
-                    {r.mother_aadhaar}
-                  </td>
-                  <td>{r.father_occupation}</td>
-                  <td>{r.mother_occupation}</td>
-                  <td>{r.address}</td>
+        <td>
+          <EditableCell
+            value={r.father_name}
+            id={r.sr}
+            field="father_name"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
 
-                  <td>
-                    <EditableCell
-                      value={r.phone1}
-                      sr={r.sr}
-                      field="phone1"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
+        <td>{r.father_aadhaar}</td>
 
-                  <td>
-                    <EditableCell
-                      value={r.phone2}
-                      sr={r.sr}
-                      field="phone2"
-                      onSaved={fetchAdmissionForms}
-                    />
-                  </td>
+        <td>
+          <EditableCell
+            value={r.mother_name}
+            id={r.sr}
+            field="mother_name"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
 
-                  <td>{r.aadhaar_number}</td>
-                  <td>{r.last_school_attended}</td>
-                  <td>{r.created_at}</td>                  
-                </tr>
-              ))}
-            </tbody>
+        <td>{r.mother_aadhaar}</td>
+        <td>{r.father_occupation}</td>
+        <td>{r.mother_occupation}</td>
+        <td>{r.address}</td>
+
+        <td>
+          <EditableCell
+            value={r.phone1}
+            id={r.sr}
+            field="phone1"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
+
+        <td>
+          <EditableCell
+            value={r.phone2}
+            id={r.sr}
+            field="phone2"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          />
+        </td>
+
+        <td>{r.aadhaar_number}</td>
+        <td>{r.last_school_attended}</td>
+
+        <td>
+          <button
+            className="btn"
+            disabled={!r.file_id}
+            onClick={() =>
+              setOpenPreviewId(
+                openPreviewId === r.file_id ? null : r.file_id
+              )
+            }
+          >
+            {openPreviewId === r.file_id ? "Hide" : "Preview"}
+          </button>
+        </td>
+      </tr>
+
+      {openPreviewId === r.file_id && (
+        <tr key={`${r.sr}-preview`}>
+          <td colSpan={17}>
+            <div
+              style={{
+                border: "1px solid #ccc",
+                marginTop: 8,
+                padding: 8,
+                background: "#fafafa"
+              }}
+            >
+              <div
+                style={{
+                  maxHeight: "500px",
+                  overflow: "auto",
+                  border: "1px solid #ccc",
+                  background: "#111",
+                  padding: 8
+                }}
+              >
+                <div style={{ marginBottom: 6 }}>
+                  <button className="btn ghost" onClick={() => setZoom(z => Math.min(z + 0.1, 2))}>+</button>
+                  <button className="btn ghost" onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}>−</button>
+                </div>
+                <img
+  src={`${API_BASE}/api/files/${r.file_id}/preview-image`}
+  style={{
+    width: "100%",
+    transform: `scale(${zoom})`,
+    transformOrigin: "top left",
+    transition: "transform 0.15s ease"
+  }}
+/>
+              </div>
+            </div>
+          </td>
+        </tr>
+      )}
+    </React.Fragment>
+  ))}
+</tbody>
           </table>
         </div>
 

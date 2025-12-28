@@ -3,11 +3,13 @@
 import SignalBadge from "./SignalBadge";
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import './EditableCell'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCCandidate = {
   sr: string;
+  student_name: string;
   total_score: number;
   signals: Record<string, any>;
 };
@@ -44,6 +46,7 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
         {rows.map((r, i) => (
           <tr key={i}>
             <td>{r.sr}</td>
+            <td>{r.student_name}</td>
             <td>{r.total_score.toFixed(2)}</td>
             <td>
               {Object.entries(r.signals).map(([k, v]) => (
