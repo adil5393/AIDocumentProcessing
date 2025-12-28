@@ -15,7 +15,7 @@ type AadhaarConfirmedMatch = {
   confirmed_on: string;
 };
 
-export default function AadhaarMatchesConfirmed({ docId,refreshKey }: { docId: number; refreshKey: number }){
+export default function AadhaarMatchesConfirmed({ docId,refreshKey,setRefreshKey }: { docId: number; refreshKey: number;setRefreshKey: React.Dispatch<React.SetStateAction<number>>; }){
 
 const [rows, setRows] = useState<AadhaarConfirmedMatch[]>([]);
 const [loading, setLoading] = useState(true);
@@ -43,6 +43,7 @@ return(
               <th>Name</th>
               <th>Role</th>
               <th>Score</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -52,6 +53,27 @@ return(
                 <td>{r.student_name}</td>
                 <td>{r.role}</td>
                 <td>{r.match_score.toFixed(2)}</td>
+                <td>
+                <button
+                  className="btn danger"
+                  onClick={async () => {
+                    if (!confirm(`Remove Aadhaar match for SR ${r.sr}?`)) return;
+
+                    try {
+                      await apiFetch(
+                        `${API_BASE}/api/aadhaar/${r.sr}/delete-match`,
+                        { method: "DELETE" }
+                      );     
+                      setRefreshKey(k => k+1);          
+                    } catch (err) {
+                      alert("Failed to delete match");
+                      console.error(err);
+                    }
+                  }}
+                >
+                  Remove
+                </button>
+              </td>
               </tr>
             ))}
           </tbody>

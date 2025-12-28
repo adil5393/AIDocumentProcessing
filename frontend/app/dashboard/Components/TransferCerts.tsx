@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import TransferCertificateCandidates from "./TransferCertificateCandidates";
+import EditableCell from "./EditableCell";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
@@ -34,6 +35,12 @@ export default function TransferCerts() {
       `${API_BASE}/api/transfer-certificates`
     );
     setRows(await refreshed.json());
+  }
+  function fetchTransferCerts() {
+    apiFetch(`${API_BASE}/api/transfer-certificates`)
+      .then(res => res.json())
+      .then(setRows)
+      .catch(console.error);
   }
   useEffect(() => {
     apiFetch(`${API_BASE}/api/transfer-certificates`)
@@ -74,13 +81,52 @@ export default function TransferCerts() {
             {rows.map((r) => (
               <React.Fragment key={r.doc_id}>
                 <tr key={`${r.doc_id}-row`}>
-                  <td>{r.student_name}</td>
-                  <td>{r.father_name || "-"}</td>
-                  <td>{r.mother_name || "-"}</td>
-                  <td>{r.date_of_birth || "-"}</td>
+                  <td>
+                    <EditableCell
+                      value={r.student_name}
+                      id={r.doc_id}
+                      field="student_name"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    />
+                </td>
+                  <td><EditableCell
+                      value={r.father_name}
+                      id={r.doc_id}
+                      field="father_name"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    />
+                  </td>
+                  <td><EditableCell
+                      value={r.mother_name}
+                      id={r.doc_id}
+                      field="mother_name"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    /></td>
+                  <td><EditableCell
+                      value={r.date_of_birth}
+                      id={r.doc_id}
+                      field="date_of_birth"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    /></td>
                   <td>{r.lookup_status || "-"}</td>
-                  <td>{r.last_class_studied || "-"}</td>
-                  <td>{r.last_school_name || "-"}</td>
+                  <td><EditableCell
+                      value={r.last_class_studied}
+                      id={r.doc_id}
+                      field="last_class_studied"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    /></td>
+                  <td><EditableCell
+                      value={r.last_school_name}
+                      id={r.doc_id}
+                      field="last_school_name"
+                      endpoint="transfer-certificates"
+                      onSaved={fetchTransferCerts}
+                    /></td>
                   <td>
                     <button
                       className="btn"

@@ -1,17 +1,19 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function EditableCell({
   value,
-  sr,
+  id,
   field,
+  endpoint,
   onSaved
 }: {
-  value: string;
-  sr: string;
+  value: string | null;
+  id: string | number;
   field: string;
+  endpoint: string; // e.g. "admission-forms" | "transfer-certificates"
   onSaved: () => void;
 }) {
   const [isEditing, setIsEditing] = useState(false);
@@ -28,7 +30,7 @@ export default function EditableCell({
 
     try {
       await apiFetch(
-        `${API_BASE}/api/admission-forms/${sr}`,
+        `${API_BASE}/api/${endpoint}/${id}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -37,7 +39,7 @@ export default function EditableCell({
       );
 
       setIsEditing(false);
-      onSaved(); // ✅ parent refresh
+      onSaved();
     } catch (err) {
       alert("Failed to save");
       console.error(err);
@@ -53,14 +55,12 @@ export default function EditableCell({
         disabled={saving}
         value={editValue}
         onChange={e => {
-            const val = e.target.value;
+          const val = e.target.value;
 
-            // 📞 Phone validation
-            if (field.startsWith("phone")) {
-            if (!/^\d*$/.test(val)) return;
-            }
+          // 📞 phone validation (still reusable)
+          if (field.startsWith("phone") && !/^\d*$/.test(val)) return;
 
-            setEditValue(val);
+          setEditValue(val);
         }}
         onBlur={save}
         onKeyDown={e => {
@@ -76,14 +76,14 @@ export default function EditableCell({
   }
 
   return (
-    <span style={{ cursor: "pointer", borderBottom: "1px dashed #ccc" }}
+    <span
+      style={{ cursor: "pointer", borderBottom: "1px dashed #ccc" }}
       onClick={() => {
         setEditValue(value || "");
         setIsEditing(true);
       }}
     >
       {value || <i style={{ color: "#aaa" }}>click to edit</i>}
-
     </span>
   );
 }

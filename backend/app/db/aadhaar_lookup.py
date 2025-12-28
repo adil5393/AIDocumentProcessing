@@ -58,21 +58,32 @@ def run_aadhaar_lookup(db, doc_id: int):
     # -------------------------
     if aadhaar_no and aadhaar_age <= 18:
         rows = db.execute(
-            text("""
-                SELECT sr,
-                student_name,
-                       CASE
-                         WHEN student_aadhaar_number = :a THEN 'student'
-                         WHEN father_aadhaar = :a THEN 'father'
-                         WHEN mother_aadhaar = :a THEN 'mother'
-                       END AS role
-                FROM admission_forms
-                WHERE student_aadhaar_number = :a
-                   OR father_aadhaar = :a
-                   OR mother_aadhaar = :a
-            """),
-            {"a": aadhaar_no}
-        ).fetchall()
+    text("""
+        SELECT af.sr,
+               af.student_name,
+               CASE
+                   WHEN af.student_aadhaar_number = :a THEN 'student'
+                   WHEN af.father_aadhaar = :a THEN 'father'
+                   WHEN af.mother_aadhaar = :a THEN 'mother'
+               END AS role
+        FROM admission_forms af
+        WHERE (
+            af.student_aadhaar_number = :a
+         OR af.father_aadhaar = :a
+         OR af.mother_aadhaar = :a
+        )
+        AND NOT EXISTS (
+            SELECT 1
+            FROM aadhaar_matches am
+            WHERE am.sr_number = af.sr
+              AND am.aadhaar_doc_id = :doc_id
+        );
+    """),
+    {
+        "a": aadhaar_no,
+        "doc_id": doc_id   # 🔥 THIS WAS MISSING
+    }
+).fetchall()
 
         for r in rows:
             candidates[(r.sr, r.role)] = build_candidate(
@@ -87,11 +98,21 @@ def run_aadhaar_lookup(db, doc_id: int):
     # -------------------------
     if not candidates:
         rows = db.execute(
-            text("""
-                SELECT sr, student_name, father_name, mother_name
-                FROM admission_forms
-            """)
-        ).fetchall()
+        text("""
+            SELECT af.sr,
+                af.student_name,
+                af.father_name,
+                af.mother_name
+            FROM admission_forms af
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM aadhaar_matches am
+                WHERE am.sr_number = af.sr
+                AND am.aadhaar_doc_id = :doc_id
+            );
+        """),
+        {"doc_id": doc_id}
+    ).fetchall()
 
         for r in rows:
             sr = r.sr

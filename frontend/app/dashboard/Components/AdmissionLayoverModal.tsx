@@ -54,11 +54,14 @@ export default function AdmissionLayoverModal({
 
       {/* LEFT: Document Preview */}
       <div className="doc-preview">
-        <iframe
-          src={`${API_BASE}/api/files/${fileId}/preview`}
-          title="Document Preview"
-        />
-      </div>
+  <div className="doc-scroll">
+    <img
+      src={`${API_BASE}/api/files/${fileId}/preview-image`}
+      alt="Document Preview"
+      className="doc-image"
+    />
+  </div>
+</div>
 
       {/* RIGHT: Review Panel */}
       <div className="review-panel">

@@ -54,7 +54,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
 
   useEffect(() => {
     fetchAadhaarDocuments();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <>
@@ -111,7 +111,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
 
                 {r.lookup_status !== "pending" && (
                   <button className="btn"
-                    onClick={() => rerunLookup(r.doc_id)}
+                    onClick={() => {rerunLookup(r.doc_id);setRefreshKey(k=>k+1)}}
                     style={{ fontSize: 12, marginLeft: 6 }}
                   >
                     Re-run Lookup
@@ -126,7 +126,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
                   <div className="aadhaar-expanded">
 
                     {/* ✅ Confirmed matches FIRST */}
-                    <AadhaarMatchesConfirmed docId={r.doc_id} refreshKey={refreshKey} />
+                    <AadhaarMatchesConfirmed docId={r.doc_id} refreshKey={refreshKey} setRefreshKey={setRefreshKey}/>
 
                     {/* 🔽 Candidates BELOW */}
                     <AadhaarLookupCandidates docId={r.doc_id} refreshKey={refreshKey} setRefreshKey={setRefreshKey}/>
@@ -141,7 +141,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
 
         </table>
           <button className="btn"
-            onClick={runPendingLookups}
+            onClick={()=>{runPendingLookups(); setRefreshKey(k=>k+1);}}
             style={{ marginBottom: 10 }}
           >
             Run Lookup for Pending Aadhaar Documents

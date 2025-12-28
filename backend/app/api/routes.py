@@ -16,13 +16,15 @@ from typing import Dict, Any
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from io import BytesIO
-from dotenv import load_dotenv
+from fastapi import BackgroundTasks
 from typing import List
 import threading, json
 import mimetypes
-
 import os
 import uuid
+from app.utils.pdftopng import generate_preview_image
+from pathlib import Path
+
 
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 
@@ -38,7 +40,6 @@ class LoginRequest(BaseModel):
 class SRDeclareRequest(BaseModel):
     sr_number: str
 
-
 def require_token(authorization: str = Header(None)):
 
     if DEV_MODE:
@@ -46,7 +47,6 @@ def require_token(authorization: str = Header(None)):
 
     if authorization != "Bearer fake-token-123":
         raise HTTPException(status_code=401, detail="Unauthorized")
-
 
 @router.get("/me")
 def me(_: str = Depends(require_token)):
@@ -194,6 +194,7 @@ def cleanup_expired_srs(
     }
 
 UPLOAD_DIR = "uploads"
+PREVIEW_DIR = Path(os.getenv("PREVIEW_DIR", "uploads/preview"))
 
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -204,24 +205,28 @@ def run_pipeline():
 
 @router.post("/upload")
 def upload_files(
-    files: List[UploadFile] = File(...),
+    background_tasks: BackgroundTasks,
+    files: List[UploadFile] = File(...),     
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
     saved_files = []
 
     for file in files:
-        ext = os.path.splitext(file.filename)[1]
+        ext = os.path.splitext(file.filename)[1].lower()
         filename = f"{uuid.uuid4()}{ext}"
         file_path = os.path.join(UPLOAD_DIR, filename)
 
+        # 1️⃣ Save original PDF
         with open(file_path, "wb") as f:
             f.write(file.file.read())
 
-        db.execute(
+        # 2️⃣ Insert DB record
+        result = db.execute(
             text("""
                 INSERT INTO uploaded_files (file_path, doc_type)
                 VALUES (:file_path, :doc_type)
+                RETURNING file_id
             """),
             {
                 "file_path": filename,
@@ -229,7 +234,16 @@ def upload_files(
             }
         )
 
+        file_id = result.scalar_one()
+
+        # 3️⃣ Schedule preview generation (🔥 key part)
+        background_tasks.add_task(
+            generate_preview_image,
+            file_path  # full path to PDF
+        )
+
         saved_files.append({
+            "file_id": file_id,
             "original_name": file.filename,
             "saved_as": filename,
             "content_type": file.content_type
@@ -241,6 +255,7 @@ def upload_files(
         "uploaded": len(saved_files),
         "files": saved_files
     }
+
 
 @router.delete("/files/{file_id}")
 def delete_file(
@@ -307,7 +322,8 @@ def list_admission_forms(
             phone2,
             student_aadhaar_number,
             last_school_attended,
-            created_at
+            created_at,
+            file_id
         FROM admission_forms
         ORDER BY created_at DESC
     """)).fetchall()
@@ -331,6 +347,7 @@ def list_admission_forms(
         "aadhaar_number": r.student_aadhaar_number,
         "last_school_attended": r.last_school_attended,
         "created_at": r.created_at,
+        "file_id": r.file_id
     }
     for r in rows
 ]
@@ -478,12 +495,15 @@ def get_tc_candidates(
     rows = db.execute(
         text("""
             SELECT
-                sr,
-                total_score,
-                signals
-            FROM transfer_certificate_candidates
-            WHERE doc_id = :d
-            ORDER BY total_score DESC
+                tcc.sr,
+                af.student_name,
+                tcc.total_score,
+                tcc.signals
+            FROM transfer_certificate_candidates tcc
+            JOIN admission_forms af
+            ON af.sr = tcc.sr
+            WHERE tcc.doc_id = :d
+            ORDER BY tcc.total_score DESC
         """),
         {"d": doc_id}
     ).fetchall()
@@ -491,6 +511,7 @@ def get_tc_candidates(
     return [
         {
             "sr": r.sr,
+            "student_name":r.student_name,
             "total_score": float(r.total_score),
             "signals": r.signals if isinstance(r.signals, dict)
                        else json.loads(r.signals)
@@ -726,19 +747,18 @@ def confirm_aadhaar_match(
             }
         )
 
-    update_sql = ROLE_UPDATE_SQL.get(role)
-    if update_sql:
-        db.execute(
-            text(update_sql),
-            {
-                "sr": sr,
-                "doc_id": doc_id,
-            }
-        )
+    # update_sql = ROLE_UPDATE_SQL.get(role)
+    # if update_sql:
+    #     db.execute(
+    #         text(update_sql),
+    #         {
+    #             "sr": sr,
+    #             "doc_id": doc_id,
+    #         }
+    #     )
     db.commit()
     return {"status": "confirmed"}
     
-
 @router.post("/tc/{doc_id}/confirm")
 def confirm_tc_match(
     doc_id: int,
@@ -813,7 +833,6 @@ def confirm_tc_match(
     db.commit()
     return {"status": "Confirmed"}
 
-
 @router.patch("/admission-forms/{sr:path}")
 def patch_admission_form(
     sr: str,
@@ -867,6 +886,61 @@ def patch_admission_form(
     return {
         "status": "ok",
         "sr": sr,
+        "updated_fields": list(payload.keys())
+    }
+
+@router.patch("/transfer-certificates/{doc_id}")
+def patch_tc(
+    doc_id: int,
+    payload: Dict[str, Any],
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    print (payload)
+    ALLOWED_FIELDS = {
+    "student_name",
+    "date_of_birth",
+    "father_name",
+    "mother_name",
+    "last_class_studied",
+    "last_school_name"
+}
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+
+    updates = []
+    params = {"doc_id": doc_id}
+
+    for field, value in payload.items():
+        if field not in ALLOWED_FIELDS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be edited"
+            )
+
+        # Normalize OCR junk
+        if isinstance(value, str):
+            value = value.strip()
+
+        updates.append(f"{field} = :{field}")
+        params[field] = value
+
+    query = f"""
+        UPDATE transfer_certificates
+        SET {", ".join(updates)}
+        WHERE doc_id = :doc_id
+    """
+
+    result = db.execute(text(query), params)
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="SR not found")
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "doc_id": doc_id,
         "updated_fields": list(payload.keys())
     }
 
@@ -1019,13 +1093,11 @@ def amtech_status(_: str = Depends(require_token)):
         "expires_in_seconds": int(expiry - time.time()) if expiry else None
     }
 
-
 @router.post("/amtech/reconnect")
 def reconnect(_: str = Depends(require_token)):
     from app.integrations.amtech_auth import authenticate
     authenticate()
     return {"status": "reconnected"}
-
 
 @router.get("/health")
 def health_check():
@@ -1034,10 +1106,6 @@ def health_check():
 @router.get("/version")
 def version():
     return {"version": "0.1.0"}
-
-@router.get("files/{file_id}/layover")
-def layover():
-    pass
 
 
 @router.post("/files/{file_id}/reassess")
@@ -1117,3 +1185,76 @@ def get_aadhaar_confirmed_matches(
     ).mappings().all()
 
     return rows
+
+@router.delete("/aadhaar/{sr:path}/delete-match")
+def deletematch(sr: str,_ : str = Depends(require_token), db = Depends(get_db)):
+    # 1️⃣ get affected Aadhaar doc IDs
+    rows = db.execute(
+        text("""
+            SELECT DISTINCT aadhaar_doc_id
+            FROM aadhaar_matches
+            WHERE sr_number = :sr
+        """),
+        {"sr": sr}
+    ).fetchall()
+
+    if not rows:
+        raise HTTPException(status_code=404, detail="No matches found for SR")
+
+    doc_ids = [r.aadhaar_doc_id for r in rows]
+
+    # 2️⃣ delete matches
+    db.execute(
+        text("""
+            DELETE FROM aadhaar_matches
+            WHERE sr_number = :sr
+        """),
+        {"sr": sr}
+    )
+
+    # 3️⃣ update Aadhaar document status
+    db.execute(
+        text("""
+            UPDATE aadhaar_documents
+            SET lookup_status = 'no_match'
+            WHERE doc_id = ANY(:doc_ids)
+        """),
+        {"doc_ids": doc_ids}
+    )
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "sr": sr,
+        "affected_docs": doc_ids,
+        "new_status": "no_match"
+    }
+
+
+@router.get("/files/{file_id}/preview-image")
+def preview_image(
+    file_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    
+    row = db.execute(
+        text("""
+            SELECT file_path
+            FROM uploaded_files
+            WHERE file_id = :id
+        """),
+        {"id": file_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "File not found")
+
+    pdf_name = Path(row.file_path)
+    preview_path = PREVIEW_DIR / f"{pdf_name.stem}.jpg"
+
+    if not preview_path.exists():
+        raise HTTPException(404, "Preview not generated")
+
+    return FileResponse(preview_path, media_type="image/jpeg")
