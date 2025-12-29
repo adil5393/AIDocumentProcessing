@@ -136,10 +136,19 @@ Fields:
 
 Rules:
 - Return ONLY valid JSON
-- If missing, use null
-- Return Name only in English
-- Use Indian Naming Convention
-- Use integers wrapped as strings instead of roman numbers
+- All names MUST be returned in English (Latin alphabet)
+- If a name appears in Hindi (Devanagari), TRANSLITERATE it to English
+  using standard Indian phonetic transliteration (not translation)
+  Example: "राम कुमार" → "Ram Kumar"
+- If a name is already in English, preserve it verbatim
+- If a name contains a title such as "Mr", "Mrs", "Ms", "Miss", "Smt", "Shri",
+  KEEP the title exactly as it appears in the document
+- Do NOT remove titles or honorifics
+- Do NOT invent titles if not present
+- Preserve original spacing and capitalization AFTER transliteration
+- If a field is missing, use null
+- Use Indian naming convention
+- Convert Roman numerals in class names to integers (as strings)
 
 OCR Text:
 \"\"\"
