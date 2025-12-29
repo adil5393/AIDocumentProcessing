@@ -58,40 +58,57 @@ export default function TransferCertificatesConfirmed({
               <tr>
                 <th>SR</th>
                 <th>Name</th>
+                <th>Parents</th>
+                <th>DOB</th>
                 <th>Score</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
-                {rows.map(r => (
-                    <tr key={r.match_id}>
-                    <td>{r.sr}</td>
-                    <td>
-                        <strong>{r.student_name || "-"}</strong><br />
-                        <small>
-                        {r.father_name || "-"} / {r.mother_name || "-"}
-                        </small><br />
-                        <small>DOB: {r.date_of_birth || "-"}</small>
-                    </td>
-                    <td>{r.match_score}</td>
-                    <td>
-                        <button
-                        className="btn danger"
-                        onClick={async () => {
-                            if (!confirm(`Remove TC match for SR ${r.sr}?`)) return;
-                            await apiFetch(
-                            `${API_BASE}/api/transfer-certificates/${r.sr}/${docId}/delete-match`,
-                            { method: "DELETE" }
-                            );
-                            setRefreshKey(k => k + 1);
-                        }}
-                        >
-                        Remove
-                        </button>
-                    </td>
-                    </tr>
-                ))}
-                </tbody>
+  {rows.map(r => (
+    <tr key={r.match_id}>
+      <td>{r.sr}</td>
+
+      {/* 👤 Student */}
+      <td>
+        <strong>{r.student_name || "-"}</strong>
+      </td>
+
+      {/* 👨‍👩‍👧 Parents */}
+      <td>
+        <strong>
+          {r.father_name || "-"} / {r.mother_name || "-"}
+        </strong>
+      </td>
+
+      {/* 🎂 DOB */}
+      <td>
+        <strong>{r.date_of_birth || "-"}</strong>
+      </td>
+
+      {/* 📊 Score */}
+      <td>{r.match_score}</td>
+
+      {/* ❌ Action */}
+      <td>
+        <button
+          className="btn danger"
+          onClick={async () => {
+            if (!confirm(`Remove TC match for SR ${r.sr}?`)) return;
+            await apiFetch(
+              `${API_BASE}/api/transfer-certificates/${r.sr}/${docId}/delete-match`,
+              { method: "DELETE" }
+            );
+            setRefreshKey(k => k + 1);
+          }}
+        >
+          Remove
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
+
           </table>
         </div>
       )}
