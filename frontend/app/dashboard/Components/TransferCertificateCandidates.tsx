@@ -38,6 +38,7 @@ export default function TransferCertificateCandidates({ docId, refreshKey, setRe
       <thead>
         <tr>
           <th>SR</th>
+          <th>Name</th>
           <th>Score</th>
           <th>Signals</th>
         </tr>
