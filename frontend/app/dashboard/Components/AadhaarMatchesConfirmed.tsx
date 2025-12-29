@@ -61,7 +61,7 @@ return(
 
                     try {
                       await apiFetch(
-                        `${API_BASE}/api/aadhaar/${r.sr}/delete-match`,
+                        `${API_BASE}/api/aadhaar/${r.sr}/${docId}/delete-match`,
                         { method: "DELETE" }
                       );     
                       setRefreshKey(k => k+1);          

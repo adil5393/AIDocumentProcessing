@@ -5,10 +5,12 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
+import DocumentPreviewRow from "./DocumentPreviewRow";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarRow = {
   doc_id: number;
+  file_id:number;
   name: string;
   date_of_birth: string | null;
   aadhaar_number: string | null;
@@ -25,6 +27,7 @@ type Props = {
 export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
   const [rows, setRows] = useState<AadhaarRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
 
   function fetchAadhaarDocuments() {
     apiFetch(`${API_BASE}/api/aadhaar-documents`)
@@ -102,16 +105,33 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
               </td>
 
               <td>
-                <button className="btn"
+                <button
+                  className="btn"
                   onClick={() => onSelectDoc(r.doc_id)}
                   style={{ fontSize: 12 }}
                 >
                   {selectedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
                 </button>
 
+                <button
+                  className="btn"
+                  style={{ fontSize: 12, marginLeft: 6 }}
+                  onClick={() =>
+                    setOpenPreviewDocId(
+                      openPreviewDocId === r.doc_id ? null : r.doc_id
+                    )
+                  }
+                >
+                  {openPreviewDocId === r.doc_id ? "Hide Preview" : "Preview"}
+                </button>
+
                 {r.lookup_status !== "pending" && (
-                  <button className="btn"
-                    onClick={() => {rerunLookup(r.doc_id);setRefreshKey(k=>k+1)}}
+                  <button
+                    className="btn"
+                    onClick={() => {
+                      rerunLookup(r.doc_id);
+                      setRefreshKey(k => k + 1);
+                    }}
                     style={{ fontSize: 12, marginLeft: 6 }}
                   >
                     Re-run Lookup
@@ -119,7 +139,14 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
                 )}
               </td>
             </tr> 
-
+            {openPreviewDocId === r.doc_id && (
+              <DocumentPreviewRow
+                key={`preview-${r.file_id}`}
+                fileId={r.file_id}
+                colSpan={8}
+                apiBase={API_BASE}
+              />
+            )}
             {selectedDocId === r.doc_id && (
               <tr>
                 <td colSpan={8} className="expanded-row">
