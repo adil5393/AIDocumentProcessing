@@ -5,10 +5,12 @@ import { apiFetch } from "../../lib/api";
 import React from "react";
 import TransferCertificateCandidates from "./TransferCertificateCandidates";
 import EditableCell from "./EditableCell";
+import DocumentPreviewRow from "./DocumentPreviewRow";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
-  doc_id: number;          // ✅ important
+  doc_id: number;       // ✅ important
+  file_id: number;
   student_name: string;
   father_name: string | null;
   mother_name: string | null;
@@ -22,6 +24,8 @@ type TCRow = {
 export default function TransferCerts() {
   const [rows, setRows] = useState<TCRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
+  const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
+
   async function runPendingLookups() {
     const res = await apiFetch(
       `${API_BASE}/api/tc/lookup/pending`,
@@ -36,6 +40,11 @@ export default function TransferCerts() {
     );
     setRows(await refreshed.json());
   }
+useEffect(() => {
+  setOpenPreviewDocId(null);
+}, [expandedDocId]);
+
+
   function fetchTransferCerts() {
     apiFetch(`${API_BASE}/api/transfer-certificates`)
       .then(res => res.json())
@@ -128,27 +137,47 @@ export default function TransferCerts() {
                       onSaved={fetchTransferCerts}
                     /></td>
                   <td>
-                    <button
-                      className="btn"
-                      onClick={() =>
-                        setExpandedDocId(
-                          expandedDocId === r.doc_id ? null : r.doc_id
-                        )
-                      }
-                    >
-                      {expandedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
-                    </button>
+                  <button
+                    className="btn"
+                    onClick={() =>
+                      setExpandedDocId(
+                        expandedDocId === r.doc_id ? null : r.doc_id
+                      )
+                    }
+                  >
+                    {expandedDocId === r.doc_id ? "Hide Matches" : "View Matches"}
+                  </button>
 
-                    <button
-                      className="btn"
-                      style={{ marginLeft: 6 }}
-                      onClick={() => rerunLookup(r.doc_id)}
-                    >
-                      🔄 Re-run
-                    </button>
-                  </td>
+                  <button
+                    className="btn"
+                    style={{ marginLeft: 6 }}
+                    onClick={() =>
+                      setOpenPreviewDocId(
+                        openPreviewDocId === r.file_id ? null : r.file_id
+                      )
+                    }
+                  >
+                    {openPreviewDocId === r.file_id ? "Hide Preview" : "Preview"}
+                  </button>
+
+                  <button
+                    className="btn"
+                    style={{ marginLeft: 6 }}
+                    onClick={() => rerunLookup(r.doc_id)}
+                  >
+                    🔄 Re-run
+                  </button>
+                </td>
+
                 </tr>
-
+                {openPreviewDocId === r.file_id && (
+                <DocumentPreviewRow
+                  key={`preview-${r.file_id}`}
+                  fileId={r.file_id}
+                  colSpan={8}
+                  apiBase={API_BASE}
+                />
+              )}
                 {expandedDocId === r.doc_id && (
                   <tr key={`${r.doc_id}-candidates`}>
                     <td colSpan={8} className="expanded-row">

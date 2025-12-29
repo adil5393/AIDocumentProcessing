@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import EditableCell from './EditableCell';
+import DocumentPreviewRow from "./DocumentPreviewRow";
 import './sidebar.css'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
@@ -262,7 +263,13 @@ export default function AdmissionForms() {
           />
         </td>
 
-        <td>{r.aadhaar_number}</td>
+        <td><EditableCell
+            value={r.aadhaar_number}
+            id={r.sr}
+            field="student_aadhaar_number"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          /></td>
         <td>{r.last_school_attended}</td>
 
         <td>
@@ -281,46 +288,16 @@ export default function AdmissionForms() {
       </tr>
 
       {openPreviewId === r.file_id && (
-        <tr key={`${r.sr}-preview`}>
-          <td colSpan={17}>
-            <div
-              style={{
-                border: "1px solid #ccc",
-                marginTop: 8,
-                padding: 8,
-                background: "#fafafa"
-              }}
-            >
-              <div
-                style={{
-                  maxHeight: "500px",
-                  overflow: "auto",
-                  border: "1px solid #ccc",
-                  background: "#111",
-                  padding: 8
-                }}
-              >
-                <div style={{ marginBottom: 6 }}>
-                  <button className="btn ghost" onClick={() => setZoom(z => Math.min(z + 0.1, 2))}>+</button>
-                  <button className="btn ghost" onClick={() => setZoom(z => Math.max(z - 0.1, 0.5))}>−</button>
-                </div>
-                <img
-  src={`${API_BASE}/api/files/${r.file_id}/preview-image`}
-  style={{
-    width: "100%",
-    transform: `scale(${zoom})`,
-    transformOrigin: "top left",
-    transition: "transform 0.15s ease"
-  }}
-/>
-              </div>
-            </div>
-          </td>
-        </tr>
-      )}
-    </React.Fragment>
-  ))}
-</tbody>
+            <DocumentPreviewRow
+              key={`${r.sr}-preview`}
+              fileId={r.file_id}
+              colSpan={17}
+              apiBase={API_BASE}
+            />
+          )}
+                  </React.Fragment>
+                ))}
+            </tbody>
           </table>
         </div>
 

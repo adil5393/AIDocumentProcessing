@@ -1,0 +1,27 @@
+/* Sticky zoom toolbar inside scroll container */
+.doc-viewer-toolbar {
+  position: sticky;
+  top: env(safe-area-inset-top);
+  
+  z-index: 10;
+
+  display: flex;
+  gap: 6px;
+  align-items: center;
+
+  padding: 6px;
+  margin-bottom: 6px;
+
+ 
+  backdrop-filter: blur(4px);
+
+  background: rgba(250,250,250,0.95);
+  border-bottom: 1px solid #ddd;
+justify-content: flex-end;
+}
+
+/* Optional: make buttons slightly smaller */
+.doc-viewer-toolbar .btn {
+  font-size: 12px;
+  padding: 4px 8px;
+}

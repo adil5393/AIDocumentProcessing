@@ -360,6 +360,7 @@ def list_aadhaar_documents(
     rows = db.execute(text("""
         SELECT
             doc_id,
+            file_id,
             name,
             date_of_birth,
             aadhaar_number,
@@ -375,6 +376,7 @@ def list_aadhaar_documents(
     return [
         {
             "doc_id": r.doc_id,
+            "file_id": r.file_id,
             "name": r.name,
             "date_of_birth": r.date_of_birth,
             "aadhaar_number": r.aadhaar_number,
@@ -395,6 +397,7 @@ def list_transfer_certificates(
     rows = db.execute(text("""
         SELECT
             doc_id,
+            file_id,
             student_name,
             father_name,
             mother_name,
@@ -410,6 +413,7 @@ def list_transfer_certificates(
     return [
         {
             "doc_id": r.doc_id,
+            "file_id":r.file_id,
             "student_name": r.student_name,
             "father_name": r.father_name,
             "mother_name": r.mother_name,
@@ -842,6 +846,7 @@ def patch_admission_form(
 ):
     ALLOWED_FIELDS = {
     "student_name",
+    "student_aadhaar_number",
     "date_of_birth",
     "father_name",
     "mother_name",
@@ -855,7 +860,7 @@ def patch_admission_form(
 
     updates = []
     params = {"sr": sr}
-
+    print(payload)
     for field, value in payload.items():
         if field not in ALLOWED_FIELDS:
             raise HTTPException(
@@ -1186,40 +1191,104 @@ def get_aadhaar_confirmed_matches(
 
     return rows
 
-@router.delete("/aadhaar/{sr:path}/delete-match")
-def deletematch(sr: str,_ : str = Depends(require_token), db = Depends(get_db)):
-    # 1️⃣ get affected Aadhaar doc IDs
+@router.get("/transfer-certificates/{tc_doc_id}/matches")
+def get_tc_confirmed_matches(
+    tc_doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
     rows = db.execute(
         text("""
-            SELECT DISTINCT aadhaar_doc_id
+            SELECT
+                m.id                AS match_id,
+                m.sr_number         AS sr,
+                a.student_name,
+                a.father_name,
+                a.mother_name,
+                a.date_of_birth,
+                m.match_score,
+                m.match_method,
+                m.confirmed_on
+            FROM tc_matches m
+            LEFT JOIN admission_forms a
+                   ON a.sr = m.sr_number
+            WHERE m.tc_doc_id = :tc_doc_id
+              AND m.is_confirmed = TRUE
+            ORDER BY m.confirmed_on ASC
+        """),
+        {"tc_doc_id": tc_doc_id},
+    ).mappings().all()
+
+    return [
+        {
+            "match_id": r["match_id"],
+            "sr": r["sr"],
+            "student_name": r["student_name"],
+            "father_name": r["father_name"],
+            "mother_name": r["mother_name"],
+            "date_of_birth": (
+                r["date_of_birth"].isoformat()
+                if r["date_of_birth"] else None
+            ),
+            "match_score": r["match_score"],
+            "match_method": r["match_method"],
+            "confirmed_on": (
+                r["confirmed_on"].isoformat()
+                if r["confirmed_on"] else None
+            ),
+        }
+        for r in rows
+    ]
+
+@router.delete("/aadhaar/{sr:path}/{aadhaar_doc_id}/delete-match")
+def delete_aadhaar_match(
+    sr: str,
+    aadhaar_doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    # 1️⃣ Verify match exists
+    row = db.execute(
+        text("""
+            SELECT match_id
             FROM aadhaar_matches
             WHERE sr_number = :sr
+              AND aadhaar_doc_id = :aadhaar_doc_id
+              AND is_confirmed = TRUE
         """),
-        {"sr": sr}
-    ).fetchall()
+        {
+            "sr": sr,
+            "aadhaar_doc_id": aadhaar_doc_id,
+        },
+    ).first()
 
-    if not rows:
-        raise HTTPException(status_code=404, detail="No matches found for SR")
+    if not row:
+        raise HTTPException(
+            status_code=404,
+            detail="Confirmed Aadhaar match not found"
+        )
 
-    doc_ids = [r.aadhaar_doc_id for r in rows]
-
-    # 2️⃣ delete matches
+    # 2️⃣ Delete ONLY this match
     db.execute(
         text("""
             DELETE FROM aadhaar_matches
             WHERE sr_number = :sr
+              AND aadhaar_doc_id = :aadhaar_doc_id
         """),
-        {"sr": sr}
+        {
+            "sr": sr,
+            "aadhaar_doc_id": aadhaar_doc_id,
+        },
     )
 
-    # 3️⃣ update Aadhaar document status
+    # 3️⃣ Reset lookup status for this Aadhaar doc
     db.execute(
         text("""
             UPDATE aadhaar_documents
             SET lookup_status = 'no_match'
-            WHERE doc_id = ANY(:doc_ids)
+            WHERE doc_id = :aadhaar_doc_id
         """),
-        {"doc_ids": doc_ids}
+        {"aadhaar_doc_id": aadhaar_doc_id},
     )
 
     db.commit()
@@ -1227,8 +1296,8 @@ def deletematch(sr: str,_ : str = Depends(require_token), db = Depends(get_db)):
     return {
         "status": "ok",
         "sr": sr,
-        "affected_docs": doc_ids,
-        "new_status": "no_match"
+        "aadhaar_doc_id": aadhaar_doc_id,
+        "new_status": "no_match",
     }
 
 
@@ -1238,7 +1307,7 @@ def preview_image(
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
-    
+    print(file_id)
     row = db.execute(
         text("""
             SELECT file_path
