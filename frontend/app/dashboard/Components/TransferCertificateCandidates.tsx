@@ -14,7 +14,7 @@ type TCCandidate = {
   signals: Record<string, any>;
 };
 
-export default function TransferCertificateCandidates({ docId }: { docId: number }) {
+export default function TransferCertificateCandidates({ docId, refreshKey, setRefreshKey }: { docId: number, refreshKey: number,setRefreshKey: React.Dispatch<React.SetStateAction<number>>; }) {
   const [rows, setRows] = useState<TCCandidate[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -28,7 +28,7 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
       setLoading(false);
     };
     load();
-  }, [docId]);
+  }, [docId, refreshKey]);
 
   if (loading) return <p>Loading TC matches…</p>;
   if (!rows.length) return <p>No TC matches found.</p>;
@@ -70,7 +70,7 @@ export default function TransferCertificateCandidates({ docId }: { docId: number
                     }),
                   }
                 );
-
+                setRefreshKey(k => k+1);
                 alert("TC match confirmed");
               }}
             >

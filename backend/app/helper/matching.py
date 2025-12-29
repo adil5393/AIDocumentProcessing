@@ -1,7 +1,7 @@
 import re
 from datetime import date
 
-STOPWORDS = {"mr", "mrs", "ms", "miss", "sh", "smt", "kum", "dr"}
+STOPWORDS = {}
 
 def normalize_name(name: str) -> list[str]:
     if not name:

@@ -602,7 +602,7 @@ def rerun_tc_lookup(
             status_code=409,
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
-
+    
     from app.db.transfer_certificate_lookup import run_tc_lookup
     run_tc_lookup(db, doc_id)
 
@@ -1300,6 +1300,58 @@ def delete_aadhaar_match(
         "new_status": "no_match",
     }
 
+@router.delete("/transfer-certificates/{sr:path}/{tc_doc_id}/delete-match")
+def delete_tc_match(
+    sr: str,
+    tc_doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    print(sr, tc_doc_id)
+
+    # 1️⃣ Verify confirmed match exists
+    row = db.execute(
+        text("""
+            SELECT id
+            FROM tc_matches
+            WHERE sr_number = :sr
+              AND tc_doc_id = :tc_doc_id
+              AND is_confirmed = TRUE
+        """),
+        {"sr": sr, "tc_doc_id": tc_doc_id},
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="TC match not found")
+
+    # 2️⃣ Delete ONLY this match
+    db.execute(
+        text("""
+            DELETE FROM tc_matches
+            WHERE sr_number = :sr
+              AND tc_doc_id = :tc_doc_id
+        """),
+        {"sr": sr, "tc_doc_id": tc_doc_id},
+    )
+
+    # 3️⃣ Reset lookup status for this TC document
+    db.execute(
+        text("""
+            UPDATE transfer_certificates
+            SET lookup_status = 'no_match'
+            WHERE doc_id = :tc_doc_id
+        """),
+        {"tc_doc_id": tc_doc_id},
+    )
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "sr": sr,
+        "tc_doc_id": tc_doc_id,
+        "new_status": "no_match",
+    }
 
 @router.get("/files/{file_id}/preview-image")
 def preview_image(

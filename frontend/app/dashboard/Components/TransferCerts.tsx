@@ -6,6 +6,7 @@ import React from "react";
 import TransferCertificateCandidates from "./TransferCertificateCandidates";
 import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
+import TransferCertificatesConfirmed from "./TransferCertificatesConfirmed";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
@@ -25,7 +26,7 @@ export default function TransferCerts() {
   const [rows, setRows] = useState<TCRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
-
+  const [refreshKey, setRefreshKey] = useState(0);
   async function runPendingLookups() {
     const res = await apiFetch(
       `${API_BASE}/api/tc/lookup/pending`,
@@ -55,7 +56,7 @@ useEffect(() => {
     apiFetch(`${API_BASE}/api/transfer-certificates`)
       .then(res => res.json())
       .then(setRows);
-  }, []);
+  }, [refreshKey]);
     async function rerunLookup(docId: number) {
 
     await apiFetch(
@@ -163,7 +164,7 @@ useEffect(() => {
                   <button
                     className="btn"
                     style={{ marginLeft: 6 }}
-                    onClick={() => rerunLookup(r.doc_id)}
+                    onClick={() => {rerunLookup(r.doc_id); setRefreshKey(k => k+1)}}
                   >
                     🔄 Re-run
                   </button>
@@ -179,12 +180,27 @@ useEffect(() => {
                 />
               )}
                 {expandedDocId === r.doc_id && (
-                  <tr key={`${r.doc_id}-candidates`}>
+                  <tr key={`${r.doc_id}-expanded`}>
                     <td colSpan={8} className="expanded-row">
-                      <TransferCertificateCandidates docId={r.doc_id} />
+                      
+                      {/* ✅ Confirmed matches FIRST */}
+                      <TransferCertificatesConfirmed
+                        docId={r.doc_id}
+                        refreshKey={refreshKey}
+                        setRefreshKey={setRefreshKey}
+                      />
+
+                      {/* 🔽 Candidates BELOW */}
+                      <TransferCertificateCandidates
+                        docId={r.doc_id}
+                        refreshKey={refreshKey}
+                        setRefreshKey={setRefreshKey}
+                      />
+
                     </td>
                   </tr>
                 )}
+
               </React.Fragment>
             ))}
           </tbody>
