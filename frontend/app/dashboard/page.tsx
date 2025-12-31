@@ -10,7 +10,9 @@ import "./Components/dashboard.css";
 import Files from "./Components/Files";
 import AmtechPanel from "./Components/AmtechPanel";
 import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
+import Marksheets from "./Components/Marksheets";
 import './Components/header.css'
+import BirthCertificates from "./Components/Birthcertificates";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
@@ -23,7 +25,7 @@ type FileRow = {
   extraction_done: boolean;
   extraction_error: string | null;
 };
-type Tab = "files" | "admission" | "aadhaar" | "tc" | "amtech";
+type Tab = "files" | "admission" | "aadhaar" | "tc" | "amtech" | "marksheets" | "birth_certificates";
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
@@ -196,9 +198,16 @@ useEffect(() => {
   <button className={`tab ${tab === "tc" ? "active" : ""}`} onClick={() => setTab("tc")}>
     Transfer Certificates
   </button>
+  <button className={`tab ${tab === "marksheets" ? "active" : ""}`} onClick={() => setTab("marksheets")}>
+    Marksheets
+  </button>
+  <button className={`tab ${tab === "birth_certificates" ? "active" : ""}`} onClick={() => setTab("birth_certificates")}>
+    Birth Certificates
+  </button>
   <button className={`tab ${tab === "amtech" ? "active" : ""}`} onClick={() => setTab("amtech")}>
     Amtech
   </button>
+  
 </div>
 
 
@@ -231,6 +240,8 @@ useEffect(() => {
         )}
         {tab === "tc" && <TransferCerts />}
         {tab === "amtech" && <AmtechPanel />}
+        {tab === "marksheets" && <Marksheets API_BASE={API_BASE}/>}
+        {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE}/>}
       </div>
         {tab === "files" && (
           <Files
