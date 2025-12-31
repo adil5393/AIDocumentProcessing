@@ -5,7 +5,8 @@ from fastapi import HTTPException
 def insert_admission_form(db,file_id, data):
     sr = data.get("sr")
     if not sr:
-        raise HTTPException(status_code=400, detail="SR missing in extracted data")
+        sr="XXX"
+        # raise HTTPException(status_code=400, detail="SR missing in extracted data")
 
     sr = sr.strip().upper()
 

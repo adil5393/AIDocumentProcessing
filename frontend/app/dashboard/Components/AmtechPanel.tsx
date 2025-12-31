@@ -1,15 +1,63 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
+import { useRouter } from "next/navigation";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
+type AmtechBranch = {
+  user_branch_id: number;
+  branch: {
+    branch_name: string;
+    master_id: string;
+  };
+  school: {
+    school_name: string;
+    master_id: string;
+  };
+};
+
+type StudentOverview = {
+  sr: string;
+  admission_name: string;
+  aadhaar_name: string | null;
+  aadhaar_confirmed: boolean | null;
+  tc_name: string | null;
+  tc_confirmed: boolean | null;
+};
+
+type AmtechStatus = {
+  connected: boolean;
+  user_id: string;
+  branches: AmtechBranch[];
+  expires_at: number;
+  expires_in_seconds: number;
+};
+
 export default function AmtechPanel() {
-  const [status, setStatus] = useState<any | null>(null);
+
+  const [status, setStatus] = useState<AmtechStatus  | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
+  const [students, setStudents] = useState<StudentOverview[]>([]);
+  const router = useRouter();
 
+  const isConnected = status?.connected ?? false;
+  const branches = status?.branches ?? [];
+  const hoursLeft = status
+  ? Math.floor(status.expires_in_seconds / 3600)
+  : null;
+  const loadStudents = async () => {
+  try {
+    const res = await apiFetch(`${API_BASE}/api/amtech/overview`);
+    if (!res.ok) throw new Error("Failed to load students");
+    setStudents(await res.json());
+  } catch (e: any) {
+    setError(e.message || "Failed to load students");
+  }
+};
   const loadStatus = async () => {
     setLoading(true);
     setError(null);
@@ -24,7 +72,17 @@ export default function AmtechPanel() {
       setLoading(false);
     }
   };
-
+useEffect(() => {
+  loadStudents();
+}, []); 
+  useEffect(() => {
+    if (branches.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(branches[0].branch.master_id);
+    }
+  }, [branches, selectedBranchId]);
+  useEffect(() => {
+  loadStatus();
+  }, []);
   const reconnect = async () => {
     await apiFetch(`${API_BASE}/api/amtech/reconnect`, {
       method: "POST",
@@ -33,47 +91,135 @@ export default function AmtechPanel() {
   };
 
   return (
-    <div style={{ padding: 12 }}>
-      <h2>Amtech Integration</h2>
+  <div style={{ padding: 12 }}>
+    <h2>Amtech Integration</h2>
 
-      <button className="btn" onClick={loadStatus}>
-        Check Connection
+    <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+      <button
+        className="btn"
+        onClick={loadStatus}
+        disabled={loading}
+      >
+        🔍 Check Connection
       </button>
 
-      {loading && <p>Checking connection…</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      {status && (
-        <div style={{ marginTop: 10 }}>
-          <p>
-            Status:{" "}
-            {status.connected ? "🟢 Connected" : "🔴 Disconnected"}
-          </p>
-
-          {status.connected && (
-            <>
-              <p>User ID: {status.user_id}</p>
-              <p>
-                Token expires in:{" "}
-                {Math.floor(status.expires_in_seconds / 3600)} hours
-              </p>
-
-              <h4>Branches</h4>
-              <ul>
-                {status.branches?.map((b: any) => (
-                  <li key={b.branch.master_id}>
-                    {b.branch.branch_name}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-
-          <button className="btn" onClick={reconnect}>
-            🔁 Reconnect Amtech
-          </button>
-        </div>
+      {!isConnected && status && (
+        <button
+          className="btn danger"
+          onClick={reconnect}
+          disabled={loading}
+        >
+          🔁 Reconnect
+        </button>
       )}
     </div>
-  );
+
+    {loading && <p>Checking connection…</p>}
+    {error && <p style={{ color: "red" }}>{error}</p>}
+  
+    { status && (
+      <div style={{ marginTop: 10 }}>
+        <p>
+          Status:{" "}
+          {isConnected ? "🟢 Connected" : "🔴 Disconnected"}
+        </p>
+
+        <p>User ID: {status.user_id}</p>
+
+        {isConnected && hoursLeft !== null && (
+          <p>Token expires in: {hoursLeft} hours</p>
+        )}
+
+        {branches.length > 0 && (
+  <>
+    <h4>Select Branch</h4>
+
+    <select
+      value={selectedBranchId ?? ""}
+      onChange={(e) => setSelectedBranchId(e.target.value)}
+      style={{ padding: 6, minWidth: 250 }}
+    >
+      {branches.map(b => (
+        <option
+          key={b.branch.master_id}
+          value={b.branch.master_id}
+        >
+          {b.branch.branch_name}
+        </option>
+      ))}
+    </select>
+    
+  </>
+)}
+      </div>
+    )}
+  <table className="table">
+  <thead>
+    <tr>
+      <th>SR</th>
+      <th>Student</th>
+      <th>Aadhaar</th>
+      <th>TC</th>
+      <th>Action</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {students.map(row => (
+      <tr key={row.sr}>
+        <td>{row.sr}</td>
+
+        <td>
+          <strong>{row.admission_name}</strong>
+          {(row.aadhaar_name || row.tc_name) &&
+            (
+              (row.aadhaar_name &&
+                row.admission_name.toLowerCase() !== row.aadhaar_name.toLowerCase()) ||
+              (row.tc_name &&
+                row.admission_name.toLowerCase() !== row.tc_name.toLowerCase())
+            ) && (
+              <div style={{ color: "#b45309", fontSize: 12 }}>
+                ⚠ Name mismatch
+              </div>
+          )}
+        </td>
+
+        <td align="center">
+          {row.aadhaar_confirmed ? "🟢" : "🔴"}
+          { (row.aadhaar_name &&
+                row.admission_name.toLowerCase() !== row.aadhaar_name.toLowerCase()) && <div style={{ color: "#b45309", fontSize: 12 }}>
+                ⚠ Name mismatch
+              </div>}
+        </td>
+
+        <td align="center">
+          {row.tc_confirmed ? "🟢" : "🔴"}
+          {(row.tc_name &&
+                row.admission_name.toLowerCase() !== row.tc_name.toLowerCase())
+             && 
+              <div style={{ color: "#b45309", fontSize: 12 }}>
+                ⚠ Name mismatch
+              </div>}
+        </td>
+
+        <td>
+          <button
+            className="btn small"
+            onClick={() =>
+              router.push(`/students/${row.sr}`)
+            }
+          >
+            View
+          </button>
+        </td>
+      </tr>
+
+    ))}
+  </tbody>
+</table>
+
+  </div>
+  
+);
+
 }

@@ -7,7 +7,7 @@ load_dotenv()
 
 
 PREVIEW_DIR = Path(os.getenv("PREVIEW_DIR", "uploads\\previews"))
-POPPLER_PATH = Path(r"C:\poppler-25.12.0\Library\bin")
+POPPLER_PATH = Path(r"C:\poppler-25.12.0\Library\bin")          #Poppler Path
 
 def generate_preview_image(pdf_path: str) -> str:
     pdf_path = Path(pdf_path)
@@ -28,7 +28,7 @@ def generate_preview_image(pdf_path: str) -> str:
     images[0].save(
         output_path,
         "JPEG",
-        quality=10,
+        quality=50,
         optimize=True,
         progressive=True
     )

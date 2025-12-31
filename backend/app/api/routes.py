@@ -278,12 +278,17 @@ def delete_file(
     #         detail="Cannot delete file after extraction"
     #     )
 
-    file_path = os.path.join("uploads", row.file_path)
-
+    file_path = os.path.join(UPLOAD_DIR, row.file_path)
+    p = Path(row.file_path)
+    preview_path = os.path.join(PREVIEW_DIR, f"{p.stem}.jpg")
+    print(preview_path)
+    
     try:
         # delete file from disk
         if os.path.exists(file_path):
             os.remove(file_path)
+        if os.path.exists(preview_path):
+            os.remove(preview_path)
 
         # delete DB row
         db.execute(text("""
@@ -845,22 +850,36 @@ def patch_admission_form(
     db: Session = Depends(get_db),
 ):
     ALLOWED_FIELDS = {
-    "student_name",
-    "student_aadhaar_number",
-    "date_of_birth",
-    "father_name",
-    "mother_name",
-    "phone1",
-    "phone2",
-    "father_aadhaar",
-    "class"
-}
+        "sr",
+        "student_name",
+        "student_aadhaar_number",
+        "date_of_birth",
+        "father_name",
+        "mother_name",
+        "phone1",
+        "phone2",
+        "father_aadhaar",
+        "class",
+    }
+
     if not payload:
         raise HTTPException(status_code=400, detail="Empty payload")
 
     updates = []
-    params = {"sr": sr}
-    print(payload)
+    params = {"old_sr": sr}
+    
+    if "sr" in payload:
+        exists = db.execute(
+            text("SELECT 1 FROM admission_forms WHERE sr = :sr"),
+            {"sr": payload["sr"]}
+        ).fetchone()
+
+        if exists:
+            raise HTTPException(
+                status_code=409,
+                detail="SR already exists"
+            )
+
     for field, value in payload.items():
         if field not in ALLOWED_FIELDS:
             raise HTTPException(
@@ -868,17 +887,20 @@ def patch_admission_form(
                 detail=f"Field '{field}' cannot be edited"
             )
 
-        # Normalize OCR junk
         if isinstance(value, str):
             value = value.strip()
 
-        updates.append(f"{field} = :{field}")
-        params[field] = value
+        if field == "sr":
+            updates.append("sr = :new_sr")
+            params["new_sr"] = value
+        else:
+            updates.append(f"{field} = :{field}")
+            params[field] = value
 
     query = f"""
         UPDATE admission_forms
         SET {", ".join(updates)}
-        WHERE sr = :sr
+        WHERE sr = :old_sr
     """
 
     result = db.execute(text(query), params)
@@ -890,8 +912,9 @@ def patch_admission_form(
 
     return {
         "status": "ok",
-        "sr": sr,
-        "updated_fields": list(payload.keys())
+        "old_sr": sr,
+        "new_sr": payload.get("sr", sr),
+        "updated_fields": list(payload.keys()),
     }
 
 @router.patch("/transfer-certificates/{doc_id}")
@@ -1075,35 +1098,6 @@ def login(data: LoginRequest):
         }
     raise HTTPException(status_code=401, detail="Invalid credentials")
 
-@router.get("/amtech/status")
-def amtech_status(_: str = Depends(require_token)):
-    from app.integrations.amtech_auth import load_token, is_token_valid
-    import time
-
-    token, expiry, user_id, branches = load_token()
-    print(token)
-    if not token or not user_id:
-        return {
-            "connected": False,
-            "reason": "no_token"
-        }
-
-    valid, fetched_branches = is_token_valid(token, user_id)
-    print(valid)
-    return {
-        "connected": bool(valid and expiry > time.time()),
-        "user_id": user_id,
-        "branches": fetched_branches or branches,
-        "expires_at": expiry,
-        "expires_in_seconds": int(expiry - time.time()) if expiry else None
-    }
-
-@router.post("/amtech/reconnect")
-def reconnect(_: str = Depends(require_token)):
-    from app.integrations.amtech_auth import authenticate
-    authenticate()
-    return {"status": "reconnected"}
-
 @router.get("/health")
 def health_check():
     return {"status": "ok"}
@@ -1111,7 +1105,6 @@ def health_check():
 @router.get("/version")
 def version():
     return {"version": "0.1.0"}
-
 
 @router.post("/files/{file_id}/reassess")
 def reassess_file(
@@ -1379,3 +1372,72 @@ def preview_image(
         raise HTTPException(404, "Preview not generated")
 
     return FileResponse(preview_path, media_type="image/jpeg")
+
+@router.get("/amtech/status")
+def amtech_status(_: str = Depends(require_token)):
+    from app.integrations.amtech_auth import load_token, is_token_valid
+    import time
+
+    token, expiry, user_id, branches = load_token()
+    print(token)
+    if not token or not user_id:
+        return {
+            "connected": False,
+            "reason": "no_token"
+        }
+
+    valid, fetched_branches = is_token_valid(token, user_id)
+    print(valid)
+    return {
+        "connected": bool(valid and expiry > time.time()),
+        "user_id": user_id,
+        "branches": fetched_branches or branches,
+        "expires_at": expiry,
+        "expires_in_seconds": int(expiry - time.time()) if expiry else None
+    }
+
+@router.post("/amtech/reconnect")
+def reconnect(_: str = Depends(require_token)):
+    from app.integrations.amtech_auth import authenticate
+    authenticate()
+    return {"status": "reconnected"}
+
+@router.get("/amtech/overview")
+def students_overview(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    sql = text("""
+        SELECT
+            a.sr,
+            a.student_name                  AS admission_name,
+
+            ad.name                         AS aadhaar_name,
+            am.is_confirmed                 AS aadhaar_confirmed,
+
+            tc.student_name                 AS tc_name,
+            tm.is_confirmed                 AS tc_confirmed
+
+        FROM admission_forms a
+
+        LEFT JOIN aadhaar_matches am
+            ON am.sr_number = a.sr
+           AND am.is_confirmed = true
+           AND am.match_role = 'student'
+
+        LEFT JOIN aadhaar_documents ad
+            ON ad.doc_id = am.aadhaar_doc_id
+
+        LEFT JOIN tc_matches tm
+            ON tm.sr_number = a.sr
+           AND tm.is_confirmed = true
+
+        LEFT JOIN transfer_certificates tc
+            ON tc.doc_id = tm.tc_doc_id
+
+        ORDER BY a.created_at DESC
+    """)
+
+    rows = db.execute(sql).mappings().all()
+
+    return rows

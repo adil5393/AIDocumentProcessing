@@ -1,13 +1,13 @@
 def detect_document_type(text: str) -> str:
     t = text.lower()
 
-    if "admission form" in t or "application for admission" in t:
+    if "admission form" in t.lower() or "application for admission" in t.lower():
         return "admission_form"
 
     if "transfer certificate" in t:
         return "transfer_certificate"
 
-    if "birth certificate" in t:
+    if "birth certificate" in t.lower() or ("birth" in t.lower() and "certificate" in t.lower()):
         return "birth_certificate"
 
     if (

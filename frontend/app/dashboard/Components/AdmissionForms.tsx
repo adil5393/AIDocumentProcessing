@@ -182,7 +182,13 @@ export default function AdmissionForms() {
   {rows.map(r => (
     <React.Fragment key={r.sr}>
       <tr>
-        <td>{r.sr}</td>
+        <td><EditableCell
+            value={r.sr}
+            id={r.sr}
+            field="sr"
+            endpoint="admission-forms"
+            onSaved={fetchAdmissionForms}
+          /></td>
 
         <td>
           <EditableCell
