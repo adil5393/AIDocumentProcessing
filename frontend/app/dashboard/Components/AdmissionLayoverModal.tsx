@@ -9,10 +9,15 @@ type AdmissionData = {
   gender: string;
   date_of_birth: string;
   father_name: string;
+  father_aadhaar: string;
+  father_occupation: string;
   mother_name: string;
+  mother_aadhaar: string;
+  mother_occupation: string;
   address: string;
   phone1: string;
   student_aadhaar_number: string;
+  last_school_attended: string;
 };
 
 type Props = {
@@ -39,10 +44,15 @@ export default function AdmissionLayoverModal({
     gender: initialData.gender || "",
     date_of_birth: initialData.date_of_birth || "",
     father_name: initialData.father_name || "",
+    father_aadhaar: initialData.father_aadhaar || "",
+    father_occupation: initialData.father_occupation || "",
     mother_name: initialData.mother_name || "",
+    mother_aadhaar: initialData.father_aadhaar || "",
+    mother_occupation: initialData.father_occupation || "",
     address: initialData.address || "",
     phone1: initialData.phone1 || "",
     student_aadhaar_number: initialData.student_aadhaar_number || "",
+    last_school_attended: initialData.last_school_attended || "",
   });
 
   const set = (k: keyof AdmissionData, v: string) =>
@@ -101,8 +111,20 @@ export default function AdmissionLayoverModal({
           <label>Father Name</label>
           <input value={form.father_name} onChange={e => set("father_name", e.target.value)} />
 
+          <label>Father Aadhaar</label>
+          <input value={form.father_aadhaar} onChange={e => set("father_aadhaar", e.target.value)} />
+
+          <label>Father Occupation</label>
+          <input value={form.father_occupation} onChange={e => set("father_occupation", e.target.value)} />
+
           <label>Mother Name</label>
           <input value={form.mother_name} onChange={e => set("mother_name", e.target.value)} />
+
+          <label>Mother Aadhaar</label>
+          <input value={form.mother_aadhaar} onChange={e => set("mother_aadhaar", e.target.value)} />
+
+          <label>Mother Occupation</label>
+          <input value={form.mother_occupation} onChange={e => set("mother_occupation", e.target.value)} />
 
           <label>Address</label>
           <textarea value={form.address} onChange={e => set("address", e.target.value)} />
@@ -114,6 +136,12 @@ export default function AdmissionLayoverModal({
           <input
             value={form.student_aadhaar_number}
             onChange={e => set("student_aadhaar_number", e.target.value)}
+          />
+
+          <label>Last School Attended</label>
+          <input
+            value={form.last_school_attended}
+            onChange={e => set("last_school_attended", e.target.value)}
           />
         </div>
 

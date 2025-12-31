@@ -181,18 +181,31 @@ OCR Text:
 
 def extract_birth_certificate(text: str) -> dict:
     prompt = f"""
-Extract fields from a BIRTH CERTIFICATE.
+You are extracting structured data from a BIRTH CERTIFICATE.
 
-Fields:
+The OCR text may contain:
+- encoding artifacts (garbled characters like αñªαñ┐)
+- mixed languages (Hindi + English)
+- duplicated names (one corrupted, one readable)
+
+Your job is to return CLEAN, HUMAN-READABLE ENGLISH values only.
+
+Fields to extract:
 - student_name
 - father_name
 - mother_name
 - date_of_birth (YYYY-MM-DD)
 - place_of_birth
 
-Rules:
+STRICT RULES:
 - Return ONLY valid JSON
-- Do NOT guess values
+- Use ONLY standard ASCII characters (A–Z, a–z, spaces)
+- If multiple versions of a name exist, choose the CLEAN ENGLISH one
+- If text is in Hindi, transliterate to English
+- If a value is unreadable or missing, return null
+- Do NOT guess or infer missing values
+- Remove all encoding junk and symbols
+- Normalize date_of_birth to YYYY-MM-DD
 
 OCR Text:
 \"\"\"

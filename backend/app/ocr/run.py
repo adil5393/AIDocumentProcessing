@@ -7,11 +7,13 @@ from app.ocr.gpt_doc_classifier import gpt_detect_document_type
 from app.db.insert_admission_form import insert_admission_form
 from app.db.insert_aadhaar import insert_aadhaar
 from app.db.insert_transfer_certificate import insert_transfer_certificate
+from app.db.insert_marksheet import insert_marksheet
 from app.db.aadhaar_lookup import run_aadhaar_lookup
 from app.db.transfer_certificate_lookup import run_tc_lookup
+from app.db.insert_birth_certificate import insert_birth_certificate
 import os
 import json
-from app.ocr.set_file_name import clean, tc_display_name,aadhaar_display_name,admission_display_name
+from app.ocr.set_file_name import clean, tc_display_name,aadhaar_display_name,admission_display_name,highschool_marksheet_display_name,birth_certificate_display_name
 from app.db.update_display_name import update_display_name
 
 UPLOAD_DIR = "uploads"
@@ -45,7 +47,7 @@ def run():
 
                 if not row.ocr_done:
                     ocr_text = process_file(full_path)
-
+                    print(ocr_text)
                     db.execute(text("""
                         UPDATE uploaded_files
                         SET
@@ -71,7 +73,9 @@ def run():
                     structured = extract_fields(doc_type, extracted_raw)
                 else:
                     structured = extract_fields(doc_type, ocr_text)
-
+                    
+                print(doc_type)
+                print()
                 if "error" in structured:
                     raise Exception(structured["error"])
 
@@ -101,7 +105,17 @@ def run():
                     doc_id = insert_transfer_certificate(db, file_id, structured)
                     update_display_name(db, file_id, tc_display_name(structured))
                     run_tc_lookup(db, doc_id)
-
+                
+                elif doc_type == "marksheet":
+                    doc_id = insert_marksheet(db, file_id, structured)
+                    update_display_name(db, file_id,highschool_marksheet_display_name(structured))
+                    run_tc_lookup(db, doc_id)
+                
+                elif doc_type == "birth_certificate":
+                    doc_id = insert_birth_certificate(db, file_id, structured)
+                    update_display_name(db, file_id,birth_certificate_display_name(structured))
+                    run_tc_lookup(db, doc_id)
+                    
                 # ------------------
                 # 4️⃣ Finalize
                 # ------------------

@@ -52,7 +52,7 @@ export default function LoginPage() {
 
   return (
     <div className="login-container">
-      <h2>Student AI System</h2>
+      <h2>Document Processor System</h2>
 
       <input
         placeholder="Username"
