@@ -86,7 +86,6 @@ def list_files(
         for r in rows
     ]
 
-
 @router.get("/reserved")
 async def get_reserved_srs(
     db: Session = Depends(get_db)
@@ -394,6 +393,66 @@ def list_aadhaar_documents(
         for r in rows
     ]
 
+@router.get("/marksheets")
+def list_marksheets(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            file_id,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            lookup_status,
+            created_at
+        FROM marksheets 
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "doc_id": r.doc_id,
+            "file_id": r.file_id,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
+            "dob": r.date_of_birth,
+            "lookup_status": r.lookup_status,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
+
+@router.get("/birth-certificates")
+def list_marksheets(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            file_id,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            lookup_status,
+            created_at
+        FROM birth_certificates 
+        ORDER BY created_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "doc_id": r.doc_id,
+            "file_id": r.file_id,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
+            "dob": r.date_of_birth,
+            "lookup_status": r.lookup_status,
+            "created_at": r.created_at,
+        }
+        for r in rows
+    ]
+    
 @router.get("/transfer-certificates")
 def list_transfer_certificates(
     _: str = Depends(require_token),
@@ -633,6 +692,53 @@ def run_pending_tc_lookups(
 
     return {"processed_count": len(rows)}
 
+@router.get("/marksheet/{doc_id}/lookup")
+def rerun_marksheet_lookup(
+    doc_id: int,
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    # 🔒 block if confirmed
+    status = db.execute(
+        text("""
+            SELECT lookup_status
+            FROM marksheets
+            WHERE doc_id = :d
+        """),
+        {"d": doc_id}
+    ).scalar()
+    print(status)
+    if status == "Confirmed":
+        raise HTTPException(
+            status_code=409,
+            detail="Lookup already confirmed. Unconfirm before re-running."
+        )
+    
+    from app.db.marksheet_lookup import run_marksheet_lookup
+    run_marksheet_lookup(db, doc_id)
+
+    return {"status": "ok"}
+
+@router.get("/marksheet/lookup/pending")
+def run_pending_marksheet_lookups(
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    from app.db.marksheet_lookup import run_marksheet_lookup
+
+    rows = db.execute(
+        text("""
+            SELECT doc_id
+            FROM marksheets
+            WHERE lookup_status IS DISTINCT FROM 'Confirmed'
+        """)
+    ).fetchall()
+
+    for r in rows:
+        run_marksheet_lookup(db, r.doc_id)
+
+    return {"processed_count": len(rows)}
+
 @router.post("/aadhaar/{doc_id}/{sr}/confirm")
 def confirm_aadhaar_match(
     doc_id: int,
@@ -841,6 +947,7 @@ def confirm_tc_match(
 
     db.commit()
     return {"status": "Confirmed"}
+
 
 @router.patch("/admission-forms/{sr:path}")
 def patch_admission_form(
