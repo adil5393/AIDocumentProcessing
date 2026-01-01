@@ -255,7 +255,6 @@ def upload_files(
         "files": saved_files
     }
 
-
 @router.delete("/files/{file_id}")
 def delete_file(
     file_id: int,
@@ -587,6 +586,72 @@ def get_tc_candidates(
         for r in rows
     ]
 
+@router.get("/marksheets/{doc_id}/candidates")
+def get_ms_candidates(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                ms.sr,
+                af.student_name,
+                ms.total_score,
+                ms.signals
+            FROM marksheet_candidates ms
+            JOIN admission_forms af
+            ON af.sr = ms.sr
+            WHERE ms.doc_id = :d
+            ORDER BY ms.total_score DESC
+        """),
+        {"d": doc_id}
+    ).fetchall()
+
+    return [
+        {
+            "sr": r.sr,
+            "student_name":r.student_name,
+            "total_score": float(r.total_score),
+            "signals": r.signals if isinstance(r.signals, dict)
+                       else json.loads(r.signals)
+        }
+        for r in rows
+    ]
+
+@router.get("/birth-certificates/{doc_id}/candidates")
+def get_bc_candidates(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                bc.sr,
+                af.student_name,
+                bc.total_score,
+                bc.signals
+            FROM birth_certificate_candidates bc
+            JOIN admission_forms af
+            ON af.sr = bc.sr
+            WHERE bc.doc_id = :d
+            ORDER BY bc.total_score DESC
+        """),
+        {"d": doc_id}
+    ).fetchall()
+
+    return [
+        {
+            "sr": r.sr,
+            "student_name":r.student_name,
+            "total_score": float(r.total_score),
+            "signals": r.signals if isinstance(r.signals, dict)
+                       else json.loads(r.signals)
+        }
+        for r in rows
+    ]
+
 @router.post("/aadhaar/{doc_id}/lookup")
 def aadhaar_lookup(
     
@@ -692,7 +757,7 @@ def run_pending_tc_lookups(
 
     return {"processed_count": len(rows)}
 
-@router.get("/marksheet/{doc_id}/lookup")
+@router.post("/marksheets/{doc_id}/lookup")
 def rerun_marksheet_lookup(
     doc_id: int,
     db = Depends(get_db),
@@ -719,7 +784,7 @@ def rerun_marksheet_lookup(
 
     return {"status": "ok"}
 
-@router.get("/marksheet/lookup/pending")
+@router.post("/marksheet/lookup/pending")
 def run_pending_marksheet_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
@@ -736,6 +801,52 @@ def run_pending_marksheet_lookups(
 
     for r in rows:
         run_marksheet_lookup(db, r.doc_id)
+
+    return {"processed_count": len(rows)}
+
+@router.post("/bc/{doc_id}/lookup")
+def rerun_bc_lookup(
+    doc_id: int,
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    # 🔒 block if confirmed
+    status = db.execute(
+        text("""
+            SELECT lookup_status
+            FROM birth_certificates
+            WHERE doc_id = :d
+        """),
+        {"d": doc_id}
+    ).scalar()
+    print(status)
+    if status == "Confirmed":
+        raise HTTPException(
+            status_code=409,
+            detail="Lookup already confirmed. Unconfirm before re-running."
+        )
+    
+    from app.db.run_bc_lookup import run_bc_lookup
+    run_bc_lookup(db, doc_id)
+    return {1:1}
+    
+@router.post("/bc/lookup/pending")
+def run_pending_bc_lookups(
+    db = Depends(get_db),
+    _: str = Depends(require_token),
+):
+    from app.db.run_bc_lookup import run_bc_lookup
+
+    rows = db.execute(
+        text("""
+            SELECT doc_id
+            FROM birth_certificates
+            WHERE lookup_status IS DISTINCT FROM 'Confirmed'
+        """)
+    ).fetchall()
+
+    for r in rows:
+        run_bc_lookup(db, r.doc_id)
 
     return {"processed_count": len(rows)}
 
@@ -948,6 +1059,153 @@ def confirm_tc_match(
     db.commit()
     return {"status": "Confirmed"}
 
+@router.post("/marksheets/{doc_id}/confirm")
+def confirm_marksheet_match(
+    doc_id: int,
+    payload: dict,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    sr = payload["sr"]
+    score = payload.get("score", 0)
+    method = payload.get("method", "manual_confirm")
+
+    # 1️⃣ Get file_id for cascade safety
+    row = db.execute(
+        text("""
+            SELECT file_id
+            FROM marksheets
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Marksheet not found")
+
+    file_id = row.file_id
+
+    # 2️⃣ Insert final marksheet match
+    db.execute(
+        text("""
+            INSERT INTO marksheet_matches (
+                sr_number,
+                marksheet_doc_id,
+                file_id,
+                match_score,
+                match_method,
+                is_confirmed,
+                confirmed_on
+            )
+            VALUES (
+                :sr, :doc_id, :file_id, :score, :method, true, now()
+            )
+        """),
+        {
+            "sr": sr,
+            "doc_id": doc_id,
+            "file_id": file_id,
+            "score": int(score * 100),
+            "method": method,
+        }
+    )
+
+    # 3️⃣ Delete all marksheet candidates
+    db.execute(
+        text("""
+            DELETE FROM marksheet_candidates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    # 4️⃣ Mark marksheet as confirmed
+    db.execute(
+        text("""
+            UPDATE marksheets
+            SET lookup_status = 'Confirmed',
+                lookup_checked_at = now()
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    db.commit()
+    return {"status": "Confirmed"}
+
+@router.post("/birth-certificates/{doc_id}/confirm")
+def confirm_birth_certificate_match(
+    doc_id: int,
+    payload: dict,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    sr = payload["sr"]
+    score = payload.get("score", 0)
+    method = payload.get("method", "manual_confirm")
+
+    # 1️⃣ Get file_id for cascade safety
+    row = db.execute(
+        text("""
+            SELECT file_id
+            FROM birth_certificates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    ).fetchone()
+
+    if not row:
+        raise HTTPException(404, "Birth Certificate not found")
+
+    file_id = row.file_id
+
+    # 2️⃣ Insert final birth certificate match
+    db.execute(
+        text("""
+            INSERT INTO birth_certificate_matches (
+                sr_number,
+                bc_doc_id,
+                file_id,
+                match_score,
+                match_method,
+                is_confirmed,
+                confirmed_on
+            )
+            VALUES (
+                :sr, :doc_id, :file_id, :score, :method, true, now()
+            )
+        """),
+        {
+            "sr": sr,
+            "doc_id": doc_id,
+            "file_id": file_id,
+            "score": int(score * 100),
+            "method": method,
+        }
+    )
+
+    # 3️⃣ Delete all birth certificate candidates
+    db.execute(
+        text("""
+            DELETE FROM birth_certificate_candidates
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    # 4️⃣ Mark birth certificate as confirmed
+    db.execute(
+        text("""
+            UPDATE birth_certificates
+            SET lookup_status = 'Confirmed',
+                created_at = now()
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id}
+    )
+
+    db.commit()
+    return {"status": "Confirmed"}
 
 @router.patch("/admission-forms/{sr:path}")
 def patch_admission_form(
@@ -1340,6 +1598,104 @@ def get_tc_confirmed_matches(
         for r in rows
     ]
 
+@router.get("/marksheets/{doc_id}/matches")
+def get_marksheet_confirmed_matches(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                m.id                AS match_id,
+                m.sr_number         AS sr,
+                a.student_name,
+                a.father_name,
+                a.mother_name,
+                a.date_of_birth,
+                m.match_score,
+                m.match_method,
+                m.confirmed_on
+            FROM marksheet_matches m
+            LEFT JOIN admission_forms a
+                   ON a.sr = m.sr_number
+            WHERE m.marksheet_doc_id = :doc_id
+              AND m.is_confirmed = TRUE
+            ORDER BY m.confirmed_on ASC
+        """),
+        {"doc_id": doc_id},
+    ).mappings().all()
+
+    return [
+        {
+            "match_id": r["match_id"],
+            "sr": r["sr"],
+            "student_name": r["student_name"],
+            "father_name": r["father_name"],
+            "mother_name": r["mother_name"],
+            "date_of_birth": (
+                r["date_of_birth"].isoformat()
+                if r["date_of_birth"] else None
+            ),
+            "match_score": r["match_score"],
+            "match_method": r["match_method"],
+            "confirmed_on": (
+                r["confirmed_on"].isoformat()
+                if r["confirmed_on"] else None
+            ),
+        }
+        for r in rows
+    ]
+
+@router.get("/birth-certificates/{doc_id}/matches")
+def get_marksheet_confirmed_matches(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    rows = db.execute(
+        text("""
+            SELECT
+                bc.id                AS match_id,
+                bc.sr_number         AS sr,
+                a.student_name,
+                a.father_name,
+                a.mother_name,
+                a.date_of_birth,
+                bc.match_score,
+                bc.match_method,
+                bc.confirmed_on
+            FROM birth_certificate_matches bc
+            LEFT JOIN admission_forms a
+                   ON a.sr = bc.sr_number
+            WHERE bc.bc_doc_id = :doc_id
+              AND bc.is_confirmed = TRUE
+            ORDER BY bc.confirmed_on ASC
+        """),
+        {"doc_id": doc_id},
+    ).mappings().all()
+
+    return [
+        {
+            "match_id": r["match_id"],
+            "sr": r["sr"],
+            "student_name": r["student_name"],
+            "father_name": r["father_name"],
+            "mother_name": r["mother_name"],
+            "date_of_birth": (
+                r["date_of_birth"].isoformat()
+                if r["date_of_birth"] else None
+            ),
+            "match_score": r["match_score"],
+            "match_method": r["match_method"],
+            "confirmed_on": (
+                r["confirmed_on"].isoformat()
+                if r["confirmed_on"] else None
+            ),
+        }
+        for r in rows
+    ]
+
 @router.delete("/aadhaar/{sr:path}/{aadhaar_doc_id}/delete-match")
 def delete_aadhaar_match(
     sr: str,
@@ -1453,6 +1809,113 @@ def delete_tc_match(
         "new_status": "no_match",
     }
 
+@router.delete("/marksheets/{sr:path}/{doc_id}/delete-match")
+def delete_marksheet_match(
+    sr: str,
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    print(sr, doc_id)
+
+    # 1️⃣ Verify confirmed match exists
+    row = db.execute(
+        text("""
+            SELECT id
+            FROM marksheet_matches
+            WHERE sr_number = :sr
+              AND marksheet_doc_id = :doc_id
+              AND is_confirmed = TRUE
+        """),
+        {"sr": sr, "doc_id": doc_id},
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Marksheet match not found")
+
+    # 2️⃣ Delete ONLY this match
+    db.execute(
+        text("""
+            DELETE FROM marksheet_matches
+            WHERE sr_number = :sr
+              AND marksheet_doc_id = :doc_id
+        """),
+        {"sr": sr, "doc_id": doc_id},
+    )
+
+    # 3️⃣ Reset lookup status for this marksheet document
+    db.execute(
+        text("""
+            UPDATE marksheets
+            SET lookup_status = 'no_match',
+                lookup_checked_at = now()
+            WHERE doc_id = :doc_id
+        """),
+        {"doc_id": doc_id},
+    )
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "sr": sr,
+        "doc_id": doc_id,
+        "new_status": "no_match",
+    }
+
+@router.delete("/birth-certificates/{sr:path}/{bc_doc_id}/delete-match")
+def delete_bc_match(
+    sr: str,
+    bc_doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    print(sr, bc_doc_id)
+
+    # 1️⃣ Verify confirmed match exists
+    row = db.execute(
+        text("""
+            SELECT id
+            FROM birth_certificate_matches
+            WHERE sr_number = :sr
+              AND bc_doc_id = :bc_doc_id
+              AND is_confirmed = TRUE
+        """),
+        {"sr": sr, "bc_doc_id": bc_doc_id},
+    ).first()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="BC match not found")
+
+    # 2️⃣ Delete ONLY this match
+    db.execute(
+        text("""
+            DELETE FROM birth_certificate_matches
+            WHERE sr_number = :sr
+              AND bc_doc_id = :bc_doc_id
+        """),
+        {"sr": sr, "bc_doc_id": bc_doc_id},
+    )
+
+    # 3️⃣ Reset lookup status for this TC document
+    db.execute(
+        text("""
+            UPDATE birth_certificates
+            SET lookup_status = 'no_match'
+            WHERE doc_id = :bc_doc_id
+        """),
+        {"bc_doc_id": bc_doc_id},
+    )
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "sr": sr,
+        "bc_doc_id": bc_doc_id,
+        "new_status": "no_match",
+    }
+
 @router.get("/files/{file_id}/preview-image")
 def preview_image(
     file_id: int,
@@ -1519,14 +1982,25 @@ def students_overview(
             a.sr,
             a.student_name                  AS admission_name,
 
+            -- Aadhaar
             ad.name                         AS aadhaar_name,
             am.is_confirmed                 AS aadhaar_confirmed,
 
+            -- Transfer Certificate
             tc.student_name                 AS tc_name,
-            tm.is_confirmed                 AS tc_confirmed
+            tm.is_confirmed                 AS tc_confirmed,
+
+            -- Marksheet
+            ms.student_name                 AS marksheet_name,
+            mm.is_confirmed                 AS marksheet_confirmed,
+
+            -- Birth Certificate
+            bc.student_name                 AS birth_certificate_name,
+            bcm.is_confirmed                AS birth_certificate_confirmed
 
         FROM admission_forms a
 
+        /* Aadhaar */
         LEFT JOIN aadhaar_matches am
             ON am.sr_number = a.sr
            AND am.is_confirmed = true
@@ -1535,6 +2009,7 @@ def students_overview(
         LEFT JOIN aadhaar_documents ad
             ON ad.doc_id = am.aadhaar_doc_id
 
+        /* Transfer Certificate */
         LEFT JOIN tc_matches tm
             ON tm.sr_number = a.sr
            AND tm.is_confirmed = true
@@ -1542,9 +2017,24 @@ def students_overview(
         LEFT JOIN transfer_certificates tc
             ON tc.doc_id = tm.tc_doc_id
 
+        /* Marksheet */
+        LEFT JOIN marksheet_matches mm
+            ON mm.sr_number = a.sr
+           AND mm.is_confirmed = true
+
+        LEFT JOIN marksheets ms
+            ON ms.doc_id = mm.marksheet_doc_id
+
+        /* Birth Certificate */
+        LEFT JOIN birth_certificate_matches bcm
+            ON bcm.sr_number = a.sr
+           AND bcm.is_confirmed = true
+
+        LEFT JOIN birth_certificates bc
+            ON bc.doc_id = bcm.bc_doc_id
+
         ORDER BY a.created_at DESC
     """)
 
     rows = db.execute(sql).mappings().all()
-
     return rows
