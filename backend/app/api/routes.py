@@ -392,66 +392,6 @@ def list_aadhaar_documents(
         for r in rows
     ]
 
-@router.get("/marksheets")
-def list_marksheets(db: Session = Depends(get_db)):
-    rows = db.execute(text("""
-        SELECT
-            doc_id,
-            file_id,
-            student_name,
-            father_name,
-            mother_name,
-            date_of_birth,
-            lookup_status,
-            created_at
-        FROM marksheets 
-        ORDER BY created_at DESC
-    """)).fetchall()
-
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id": r.file_id,
-            "student_name": r.student_name,
-            "father_name": r.father_name,
-            "mother_name": r.mother_name,
-            "dob": r.date_of_birth,
-            "lookup_status": r.lookup_status,
-            "created_at": r.created_at,
-        }
-        for r in rows
-    ]
-
-@router.get("/birth-certificates")
-def list_marksheets(db: Session = Depends(get_db)):
-    rows = db.execute(text("""
-        SELECT
-            doc_id,
-            file_id,
-            student_name,
-            father_name,
-            mother_name,
-            date_of_birth,
-            lookup_status,
-            created_at
-        FROM birth_certificates 
-        ORDER BY created_at DESC
-    """)).fetchall()
-
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id": r.file_id,
-            "student_name": r.student_name,
-            "father_name": r.father_name,
-            "mother_name": r.mother_name,
-            "dob": r.date_of_birth,
-            "lookup_status": r.lookup_status,
-            "created_at": r.created_at,
-        }
-        for r in rows
-    ]
-    
 @router.get("/transfer-certificates")
 def list_transfer_certificates(
     _: str = Depends(require_token),
@@ -489,6 +429,66 @@ def list_transfer_certificates(
         for r in rows
     ]
 
+@router.get("/marksheets")
+def list_marksheets(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            file_id,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            lookup_status,
+            last_checked_at
+        FROM marksheets 
+        ORDER BY last_checked_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "doc_id": r.doc_id,
+            "file_id": r.file_id,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
+            "dob": r.date_of_birth,
+            "lookup_status": r.lookup_status,
+            "last_checked_at": r.last_checked_at,
+        }
+        for r in rows
+    ]
+
+@router.get("/birth-certificates")
+def list_marksheets(db: Session = Depends(get_db)):
+    rows = db.execute(text("""
+        SELECT
+            doc_id,
+            file_id,
+            student_name,
+            father_name,
+            mother_name,
+            date_of_birth,
+            lookup_status,
+            last_checked_at
+        FROM birth_certificates 
+        ORDER BY last_checked_at DESC
+    """)).fetchall()
+
+    return [
+        {
+            "doc_id": r.doc_id,
+            "file_id": r.file_id,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
+            "dob": r.date_of_birth,
+            "lookup_status": r.lookup_status,
+            "last_checked_at": r.last_checked_at,
+        }
+        for r in rows
+    ]
+    
 @router.get("/uploads")
 def list_uploads(_: str = Depends(require_token)):
     files = []
@@ -779,7 +779,7 @@ def rerun_marksheet_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.db.marksheet_lookup import run_marksheet_lookup
+    from app.db.run_marksheet_lookup import run_marksheet_lookup
     run_marksheet_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -789,7 +789,7 @@ def run_pending_marksheet_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.db.marksheet_lookup import run_marksheet_lookup
+    from app.db.run_marksheet_lookup import run_marksheet_lookup
 
     rows = db.execute(
         text("""
@@ -1198,7 +1198,7 @@ def confirm_birth_certificate_match(
         text("""
             UPDATE birth_certificates
             SET lookup_status = 'Confirmed',
-                created_at = now()
+                last_checked_at = now()
             WHERE doc_id = :doc_id
         """),
         {"doc_id": doc_id}
