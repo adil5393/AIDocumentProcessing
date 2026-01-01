@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
 import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
-// import MarksheetCandidates from "./MarksheetCandidates";
-// import MarksheetsConfirmed from "./MarksheetsConfirmed";
+import MarksheetCandidates from "./MarksheetCandidates";
+import MarksheetsConfirmed from "./MarksheetsConfirmed";
 import { apiFetch } from "../../lib/api";
 
 interface MarksheetRow {
@@ -34,7 +34,7 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
   };
 
   const runPendingLookups = async () => {
-    await apiFetch(`${API_BASE}/api/marksheets/run-pending-lookups`, {
+    await apiFetch(`${API_BASE}/api/marksheet/lookup/pending`, {
       method: "POST",
     });
     fetchMarksheets();
@@ -161,18 +161,18 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
                   <tr>
                     <td colSpan={6} className="expanded-row">
                       {/* ✅ Confirmed FIRST */}
-                      {/* <MarksheetsConfirmed
+                      <MarksheetsConfirmed
                         docId={r.doc_id}
                         refreshKey={refreshKey}
                         setRefreshKey={setRefreshKey}
-                      /> */}
+                      />
 
                       {/* 🔽 Candidates */}
-                      {/* <MarksheetCandidates
+                      <MarksheetCandidates
                         docId={r.doc_id}
                         refreshKey={refreshKey}
                         setRefreshKey={setRefreshKey}
-                      /> */}
+                      />
                     </td>
                   </tr>
                 )}

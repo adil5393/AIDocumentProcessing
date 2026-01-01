@@ -21,10 +21,18 @@ type AmtechBranch = {
 type StudentOverview = {
   sr: string;
   admission_name: string;
+
   aadhaar_name: string | null;
   aadhaar_confirmed: boolean | null;
+
   tc_name: string | null;
   tc_confirmed: boolean | null;
+
+  marksheet_name: string | null;
+  marksheet_confirmed: boolean | null;
+
+  birth_certificate_name: string | null;
+  birth_certificate_confirmed: boolean | null;
 };
 
 type AmtechStatus = {
@@ -42,6 +50,29 @@ export default function AmtechPanel() {
   const [error, setError] = useState<string | null>(null);
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [students, setStudents] = useState<StudentOverview[]>([]);
+  const StatusCell = ({
+    ok,
+    mismatch,
+  }: {
+    ok: boolean | null;
+    mismatch: boolean;
+  }) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 4,
+      }}
+    >
+      <span>{ok ? "🟢" : "🔴"}</span>
+      {mismatch && (
+        <span style={{ color: "#b45309", fontSize: 12 }}>
+          ⚠ Name mismatch
+        </span>
+      )}
+    </div>
+  );
   const router = useRouter();
 
   const isConnected = status?.connected ?? false;
@@ -160,62 +191,83 @@ useEffect(() => {
       <th>Student</th>
       <th>Aadhaar</th>
       <th>TC</th>
+      <th>Marksheet</th>
+      <th>Birth Certificate</th>
       <th>Action</th>
     </tr>
   </thead>
 
   <tbody>
-    {students.map(row => (
+  {students.map(row => {
+    const admission = row.admission_name.toLowerCase();
+
+    return (
       <tr key={row.sr}>
         <td>{row.sr}</td>
 
+        {/* Admission */}
         <td>
           <strong>{row.admission_name}</strong>
-          {(row.aadhaar_name || row.tc_name) &&
-            (
-              (row.aadhaar_name &&
-                row.admission_name.toLowerCase() !== row.aadhaar_name.toLowerCase()) ||
-              (row.tc_name &&
-                row.admission_name.toLowerCase() !== row.tc_name.toLowerCase())
-            ) && (
-              <div style={{ color: "#b45309", fontSize: 12 }}>
-                ⚠ Name mismatch
-              </div>
-          )}
         </td>
 
-        <td align="center">
-          {row.aadhaar_confirmed ? "🟢" : "🔴"}
-          { (row.aadhaar_name &&
-                row.admission_name.toLowerCase() !== row.aadhaar_name.toLowerCase()) && <div style={{ color: "#b45309", fontSize: 12 }}>
-                ⚠ Name mismatch
-              </div>}
+        {/* Aadhaar */}
+        <td style={{ verticalAlign: "middle" }}>
+          <StatusCell
+            ok={row.aadhaar_confirmed}
+            mismatch={
+              !!row.aadhaar_name &&
+              admission !== row.aadhaar_name.toLowerCase()
+            }
+          />
         </td>
 
-        <td align="center">
-          {row.tc_confirmed ? "🟢" : "🔴"}
-          {(row.tc_name &&
-                row.admission_name.toLowerCase() !== row.tc_name.toLowerCase())
-             && 
-              <div style={{ color: "#b45309", fontSize: 12 }}>
-                ⚠ Name mismatch
-              </div>}
+        {/* TC */}
+        <td style={{ verticalAlign: "middle" }}>
+          <StatusCell
+            ok={row.tc_confirmed}
+            mismatch={
+              !!row.tc_name &&
+              admission !== row.tc_name.toLowerCase()
+            }
+          />
         </td>
 
+        {/* Marksheet */}
+        <td style={{ verticalAlign: "middle" }}>
+          <StatusCell
+            ok={row.marksheet_confirmed}
+            mismatch={
+              !!row.marksheet_name &&
+              admission !== row.marksheet_name.toLowerCase()
+            }
+          />
+        </td>
+
+        {/* Birth Certificate */}
+        <td style={{ verticalAlign: "middle" }}>
+          <StatusCell
+            ok={row.birth_certificate_confirmed}
+            mismatch={
+              !!row.birth_certificate_name &&
+              admission !== row.birth_certificate_name.toLowerCase()
+            }
+          />
+        </td>
+
+        {/* Action */}
         <td>
           <button
             className="btn small"
-            onClick={() =>
-              router.push(`/students/${row.sr}`)
-            }
+            onClick={() => router.push(`/students/${row.sr}`)}
           >
             View
           </button>
         </td>
       </tr>
+    );
+  })}
+</tbody>
 
-    ))}
-  </tbody>
 </table>
 
   </div>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
+import BirthCertificateCandidates from "./BirthCertificateCandidates";
+import BirthCertificateMatches from "./BirthCertificateMatches";
 import { apiFetch } from "../../lib/api";
 
 interface BirthCertificateRow {
@@ -26,13 +28,13 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
   };
 
   const rerunLookup = async (docId: number) => {
-    await apiFetch(`${API_BASE}/api/birth-certificates/${docId}/lookup`, {
+    await apiFetch(`${API_BASE}/api/bc/${docId}/lookup`, {
       method: "POST",
     });
   };
 
   const runPendingLookups = async () => {
-    await apiFetch(`${API_BASE}/api/birth-certificates/run-pending-lookups`, {
+    await apiFetch(`${API_BASE}/api/bc/lookup/pending`, {
       method: "POST",
     });
     fetchBirthCertificates();
@@ -158,10 +160,24 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
                 {expandedDocId === r.doc_id && (
                   <tr>
                     <td colSpan={6} className="expanded-row">
-                      {/* Candidates & confirmed will go here later */}
+
+                      {/* ✅ Confirmed FIRST */}
+                      <BirthCertificateMatches
+                        docId={r.doc_id}
+                        refreshKey={refreshKey}
+                        setRefreshKey={setRefreshKey}
+                      />
+
+                      {/* 🔽 Candidates BELOW */}
+                      <BirthCertificateCandidates
+                        docId={r.doc_id}
+                        refreshKey={refreshKey}
+                        setRefreshKey={setRefreshKey}
+                      />
+
                     </td>
                   </tr>
-                )}
+)}
               </React.Fragment>
             ))}
           </tbody>
