@@ -7,7 +7,7 @@ def detect_document_type(text: str) -> str:
     if "transfer certificate" in t:
         return "transfer_certificate"
 
-    if "birth certificate" in t.lower() or ("birth" in t.lower() and "certificate" in t.lower()):
+    if "birth certificate" in t:
         return "birth_certificate"
 
     if (

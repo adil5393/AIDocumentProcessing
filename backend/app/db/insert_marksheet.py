@@ -7,7 +7,7 @@ def compute_marksheet_hash(data: dict) -> str:
         "student_name": (data.get("student_name") or "").strip().lower(),
         "father_name": (data.get("father_name") or "").strip().lower(),
         "mother_name": (data.get("mother_name") or "").strip().lower(),
-        "dob": str(data.get("dob") or data.get("date_of_birth") or ""),
+        "date_of_birth": str(data.get("date_of_birth") or data.get("date_of_birth") or ""),
         "result_status": (data.get("result_status") or "").strip().lower(),
     }
 
@@ -24,7 +24,7 @@ def insert_marksheet(db, file_id: int, data: dict) -> int:
                 student_name,
                 father_name,
                 mother_name,
-                dob,
+                date_of_birth,
                 result_status,
                 file_id,
                 content_hash
@@ -33,7 +33,7 @@ def insert_marksheet(db, file_id: int, data: dict) -> int:
                 :student_name,
                 :father_name,
                 :mother_name,
-                :dob,
+                :date_of_birth,
                 :result_status,
                 :file_id,
                 :content_hash
@@ -45,7 +45,7 @@ def insert_marksheet(db, file_id: int, data: dict) -> int:
             "father_name": data.get("father_name"),
             "mother_name": data.get("mother_name"),
             # handle both key styles safely
-            "dob": data.get("dob") or data.get("date_of_birth"),
+            "date_of_birth": data.get("date_of_birth") or data.get("date_of_birth"),
             "result_status": data.get("result_status"),
             "file_id": file_id,
             "content_hash": content_hash,

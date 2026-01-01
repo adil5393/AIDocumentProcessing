@@ -8,7 +8,7 @@ import Aadhaars from "./Components/Aadhaars";
 import TransferCerts from "./Components/TransferCerts";
 import "./Components/dashboard.css";
 import Files from "./Components/Files";
-import AmtechPanel from "./Components/AmtechPanel";
+import CrossReview from "./Components/CrossReview";
 import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
 import Marksheets from "./Components/Marksheets";
 import './Components/header.css'
@@ -25,7 +25,7 @@ type FileRow = {
   extraction_done: boolean;
   extraction_error: string | null;
 };
-type Tab = "files" | "admission" | "aadhaar" | "tc" | "amtech" | "marksheets" | "birth_certificates";
+type Tab = "files" | "admission" | "aadhaar" | "tc" | "cross_review" | "marksheets" | "birth_certificates";
 
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
@@ -204,8 +204,8 @@ useEffect(() => {
   <button className={`tab ${tab === "birth_certificates" ? "active" : ""}`} onClick={() => setTab("birth_certificates")}>
     Birth Certificates
   </button>
-  <button className={`tab ${tab === "amtech" ? "active" : ""}`} onClick={() => setTab("amtech")}>
-    Amtech
+  <button className={`tab ${tab === "cross_review" ? "active" : ""}`} onClick={() => setTab("cross_review")}>
+    Cross Review
   </button>
   
 </div>
@@ -239,7 +239,7 @@ useEffect(() => {
           />
         )}
         {tab === "tc" && <TransferCerts />}
-        {tab === "amtech" && <AmtechPanel />}
+        {tab === "cross_review" && <CrossReview />}
         {tab === "marksheets" && <Marksheets API_BASE={API_BASE}/>}
         {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE}/>}
       </div>

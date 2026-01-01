@@ -111,7 +111,7 @@ def run_bc_lookup(db, doc_id: int):
         text("""
             UPDATE birth_certificates
             SET lookup_status = :st,
-                created_at = now()
+                last_checked_at = now()
             WHERE doc_id = :t
         """),
         {"st": status, "t": doc_id}

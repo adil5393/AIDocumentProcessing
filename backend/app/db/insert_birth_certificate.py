@@ -25,7 +25,7 @@ def insert_birth_certificate(db, file_id: int, data: dict) -> int:
                 student_name,
                 father_name,
                 mother_name,
-                dob,
+                date_of_birth,
                 place_of_birth,
                 file_id,
                 content_hash
@@ -34,7 +34,7 @@ def insert_birth_certificate(db, file_id: int, data: dict) -> int:
                 :student_name,
                 :father_name,
                 :mother_name,
-                :dob,
+                :date_of_birth,
                 :place_of_birth,
                 :file_id,
                 :content_hash
@@ -45,7 +45,7 @@ def insert_birth_certificate(db, file_id: int, data: dict) -> int:
             "student_name": data.get("student_name"),
             "father_name": data.get("father_name"),
             "mother_name": data.get("mother_name"),
-            "dob": data.get("dob") or data.get("date_of_birth"),
+            "date_of_birth": data.get("date_of_birth") or data.get("date_of_birth"),
             "place_of_birth": data.get("place_of_birth"),
             "file_id": file_id,
             "content_hash": content_hash,

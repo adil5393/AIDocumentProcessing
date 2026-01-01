@@ -43,7 +43,7 @@ type AmtechStatus = {
   expires_in_seconds: number;
 };
 
-export default function AmtechPanel() {
+export default function CrossReview() {
 
   const [status, setStatus] = useState<AmtechStatus  | null>(null);
   const [loading, setLoading] = useState(false);
@@ -51,28 +51,40 @@ export default function AmtechPanel() {
   const [selectedBranchId, setSelectedBranchId] = useState<string | null>(null);
   const [students, setStudents] = useState<StudentOverview[]>([]);
   const StatusCell = ({
-    ok,
-    mismatch,
-  }: {
-    ok: boolean | null;
-    mismatch: boolean;
-  }) => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 4,
-      }}
-    >
-      <span>{ok ? "🟢" : "🔴"}</span>
-      {mismatch && (
-        <span style={{ color: "#b45309", fontSize: 12 }}>
-          ⚠ Name mismatch
-        </span>
-      )}
-    </div>
-  );
+  ok,
+  mismatch,
+}: {
+  ok: boolean | null;
+  mismatch: boolean;
+}) => (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      lineHeight: 1.2,
+      minHeight: 40, // 👈 stabilizes row height
+    }}
+  >
+    <span style={{ fontSize: 18 }}>
+      {ok ? "🟢" : "🔴"}
+    </span>
+
+    {mismatch && (
+      <span
+        style={{
+          color: "#b45309",
+          fontSize: 11,
+          marginTop: 2,
+          whiteSpace: "nowrap",
+        }}
+      >
+        ⚠ Name mismatch
+      </span>
+    )}
+  </div>
+);
   const router = useRouter();
 
   const isConnected = status?.connected ?? false;
