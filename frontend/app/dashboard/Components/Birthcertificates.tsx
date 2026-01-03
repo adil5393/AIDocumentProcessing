@@ -46,8 +46,13 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
 
   return (
     <>
-      <h3>Birth Certificates</h3>
-
+    <button
+          className="btn"
+          onClick={runPendingLookups}
+          style={{ marginBottom: 10 }}
+        >
+          Run Lookup for Pending Birth Certificates
+        </button>
       <div style={{ overflowX: "auto" }}>
         <table className="table">
           <thead>
@@ -183,13 +188,7 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
           </tbody>
         </table>
 
-        <button
-          className="btn"
-          onClick={runPendingLookups}
-          style={{ marginBottom: 10 }}
-        >
-          Run Lookup for Pending Birth Certificates
-        </button>
+        
       </div>
     </>
   );

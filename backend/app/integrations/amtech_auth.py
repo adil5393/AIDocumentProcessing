@@ -9,9 +9,8 @@ TOKEN_FILE = "token_cache.json"
 TOKEN_EXPIRY_FILE = "token_expiry.json"
 
 BASE_URL = os.getenv("BASE_URL")
-LOGIN_URL = f"{BASE_URL}/sms/auth/login"
-
-TOKEN_VALIDATION_URL = f"{BASE_URL}/sms/userschool/"
+LOGIN_URL = f"{BASE_URL}{os.getenv("LOGIN_URL_EXTENSION")}"
+TOKEN_VALIDATION_URL = f"{BASE_URL}{os.getenv("TOKEN_VALIDATION_URL_EXTENSION")}"
 
 AMTECH_USERNAME = os.getenv("AMTECH_USERNAME")
 AMTECH_PASSWORD = os.getenv("AMTECH_PASSWORD")
@@ -55,8 +54,8 @@ def is_token_valid(token, user_id):
 
     headers = {
         "Authorization": f"Bearer {token}",
-        "Origin": "https://amtech-school.com",
-        "Referer": "https://amtech-school.com/",
+        "Origin": os.getenv("ORIGIN_REFER"),
+        "Referer": os.getenv("ORIGIN_REFER"),
         "Accept": "*/*",
         "User-Agent": "Mozilla/5.0"
     }

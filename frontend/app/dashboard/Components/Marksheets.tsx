@@ -45,9 +45,14 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
   }, [refreshKey]);
 
   return (
-    <>
-      <h3>Marksheets</h3>
-
+    <>      
+        <button
+          className="btn"
+          onClick={runPendingLookups}
+          style={{ marginBottom: 10 }}
+        >
+          Run Lookup for Pending Marksheets
+        </button>
       <div style={{ overflowX: "auto" }}>
         <table className="table">
           <thead>
@@ -180,14 +185,6 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
             ))}
           </tbody>
         </table>
-
-        <button
-          className="btn"
-          onClick={runPendingLookups}
-          style={{ marginBottom: 10 }}
-        >
-          Run Lookup for Pending Marksheets
-        </button>
       </div>
     </>
   );

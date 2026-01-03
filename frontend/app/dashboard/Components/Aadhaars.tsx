@@ -61,8 +61,12 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
 
   return (
     <>
-      <h3>Aadhaar Documents</h3>
-
+          <button className="btn"
+            onClick={()=>{runPendingLookups(); setRefreshKey(k=>k+1);}}
+            style={{ marginBottom: 10 }}
+          >
+            Run Lookup for Pending Aadhaar Documents
+          </button>
       <div style={{ overflowX: "auto" }}>
         <table className="table">
           <thead>
@@ -167,12 +171,6 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
       </tbody>
 
         </table>
-          <button className="btn"
-            onClick={()=>{runPendingLookups(); setRefreshKey(k=>k+1);}}
-            style={{ marginBottom: 10 }}
-          >
-            Run Lookup for Pending Aadhaar Documents
-          </button>
       </div>
     </>
   );

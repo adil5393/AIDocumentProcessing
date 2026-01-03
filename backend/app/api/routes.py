@@ -7,11 +7,11 @@ from app.ocr.run import run
 from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.database import get_db
+from app.db.session import get_db
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta
-from app.db.aadhaar_lookup import run_aadhaar_lookup
+from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
 from typing import Dict, Any
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
@@ -732,7 +732,7 @@ def rerun_tc_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.db.transfer_certificate_lookup import run_tc_lookup
+    from backend.app.jobs.run_transfer_certificate_lookup import run_tc_lookup
     run_tc_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -742,7 +742,7 @@ def run_pending_tc_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.db.transfer_certificate_lookup import run_tc_lookup
+    from backend.app.jobs.run_transfer_certificate_lookup import run_tc_lookup
 
     rows = db.execute(
         text("""
@@ -779,7 +779,7 @@ def rerun_marksheet_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.db.run_marksheet_lookup import run_marksheet_lookup
+    from app.jobs.run_marksheet_lookup import run_marksheet_lookup
     run_marksheet_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -789,7 +789,7 @@ def run_pending_marksheet_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.db.run_marksheet_lookup import run_marksheet_lookup
+    from app.jobs.run_marksheet_lookup import run_marksheet_lookup
 
     rows = db.execute(
         text("""
@@ -826,7 +826,7 @@ def rerun_bc_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.db.run_bc_lookup import run_bc_lookup
+    from app.jobs.run_bc_lookup import run_bc_lookup
     run_bc_lookup(db, doc_id)
     return {1:1}
     
@@ -835,7 +835,7 @@ def run_pending_bc_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.db.run_bc_lookup import run_bc_lookup
+    from app.jobs.run_bc_lookup import run_bc_lookup
 
     rows = db.execute(
         text("""
@@ -1972,7 +1972,7 @@ def reconnect(_: str = Depends(require_token)):
     authenticate()
     return {"status": "reconnected"}
 
-@router.get("/amtech/overview")
+@router.get("/students/crossreview")
 def students_overview(
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
