@@ -732,7 +732,7 @@ def rerun_tc_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from backend.app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+    from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
     run_tc_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -742,7 +742,7 @@ def run_pending_tc_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from backend.app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+    from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
 
     rows = db.execute(
         text("""

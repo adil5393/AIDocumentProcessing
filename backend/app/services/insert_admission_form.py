@@ -84,7 +84,11 @@ def insert_admission_form(db,file_id, data):
                     :student_name,
                     :gender,
                     :date_of_birth,
+<<<<<<< HEAD
                     :spen
+=======
+                    :spen,
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
                     :father_name,
                     :mother_name,
                     :father_occupation,
@@ -95,7 +99,11 @@ def insert_admission_form(db,file_id, data):
                     :phone1,
                     :phone2,
                     :student_aadhaar_number,
+<<<<<<< HEAD
                     :last_school_attended
+=======
+                    :last_school_attended,
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
                     :file_id
                 )
             """), {

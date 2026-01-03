@@ -54,7 +54,11 @@ OUTPUT SCHEMA (JSON)
   "father_aadhaar": string | null,
   "mother_aadhaar": string | null,
   "student_aadhaar_number": string | null,
+<<<<<<< HEAD
   "spen_number": string | null,
+=======
+  "spen": string | null,
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
   "address": string | null,
   "phone1": string | null,
   "phone2": string | null,
@@ -76,7 +80,11 @@ HARD RULES (MANDATORY)
    - MUST NOT be copied into Aadhaar fields
 5. If a 10-digit number is found, DO NOT place it in any Aadhaar field.
 6. If a 12-digit number is found near "Mobile" or "Phone", IGNORE it.
+<<<<<<< HEAD
 8. Use "spen_number" for SPEN / PEN interchangeably.
+=======
+8. Use "spen" for SPEN NUMBER / PEN NUMBER interchangeably.
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
 9. Use Arabic numerals only (Always convert Roman numerals).
 10. Give values of class only as integers wrapped as text.
 NOTE:

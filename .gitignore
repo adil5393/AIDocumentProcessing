@@ -7,6 +7,10 @@ backend/venv/
 SampleFiles/
 backend/uploads/
 tempCodeRunnerFile.py
+<<<<<<< HEAD
+=======
+backend/olddata/students.csv
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
 *.log
 __pycache__/
 .next/cache/

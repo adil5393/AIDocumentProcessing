@@ -222,6 +222,7 @@ useEffect(() => {
 
       <div>
         {layoverFile &&  (
+<<<<<<< HEAD
           <AdmissionLayoverModal
             fileId={layoverFile.file_id}
             initialData={layoverFile.extracted_raw ?? {}}
@@ -235,6 +236,24 @@ useEffect(() => {
             }}
             onClose={() => setLayoverFile(null)}
           />
+=======
+         <AdmissionLayoverModal
+  fileId={layoverFile.file_id}
+  initialData={
+    typeof layoverFile.extracted_raw === "string"
+      ? JSON.parse(layoverFile.extracted_raw)
+      : layoverFile.extracted_raw ?? {}
+  }
+  error={layoverFile.extraction_error}
+  onConfirm={(data) => {
+    console.log("CONFIRM ADMISSION", data);
+  }}
+  onReject={() => {
+    console.log("REJECT ADMISSION");
+  }}
+  onClose={() => setLayoverFile(null)}
+/>
+>>>>>>> 1c6054e46ac1c4d19b999202615ecf67a3056284
         )}
         {tab === "admission" && (
           <AdmissionForms />
