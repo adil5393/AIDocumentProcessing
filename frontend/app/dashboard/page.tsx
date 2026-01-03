@@ -180,9 +180,18 @@ useEffect(() => {
   <button className="btn secondary" onClick={runPipeline}>
     ⚙ Run OCR + Extraction
   </button>
+  <div className="action-right">
+        <button className="btn ghost" onClick={exportExcel}>
+          📥 Export Excel
+        </button>
 
+        <button className="btn danger" onClick={logout}>
+          Logout
+        </button>
+      </div>
   <span className="status-text">{status}</span>
 </div>
+  
 
 {/* TABS */}
 <div className="tabs">
@@ -251,15 +260,7 @@ useEffect(() => {
           />
         )}
       <br />
-       <div className="action-right">
-        <button className="btn ghost" onClick={exportExcel}>
-          📥 Export Excel
-        </button>
-
-        <button className="btn danger" onClick={logout}>
-          Logout
-        </button>
-      </div>
+       
     </div>
   );
 }

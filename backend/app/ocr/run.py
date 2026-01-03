@@ -1,20 +1,20 @@
 from sqlalchemy import text
-from app.db.database import SessionLocal
+from app.db.session import SessionLocal
 from app.ocr.google_ocr import process_file
 from app.ocr.extractor import extract_fields
 from app.ocr.doc_classifier import detect_document_type
 from app.ocr.gpt_doc_classifier import gpt_detect_document_type
-from app.db.insert_admission_form import insert_admission_form
-from app.db.insert_aadhaar import insert_aadhaar
-from app.db.insert_transfer_certificate import insert_transfer_certificate
-from app.db.insert_marksheet import insert_marksheet
-from app.db.aadhaar_lookup import run_aadhaar_lookup
-from app.db.transfer_certificate_lookup import run_tc_lookup
-from app.db.insert_birth_certificate import insert_birth_certificate
+from app.services.insert_admission_form import insert_admission_form
+from app.services.insert_aadhaar import insert_aadhaar
+from app.services.insert_transfer_certificate import insert_transfer_certificate
+from app.services.insert_marksheet import insert_marksheet
+from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
+from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+from app.services.insert_birth_certificate import insert_birth_certificate
 import os
 import json
 from app.ocr.set_file_name import clean, tc_display_name,aadhaar_display_name,admission_display_name,highschool_marksheet_display_name,birth_certificate_display_name
-from app.db.update_display_name import update_display_name
+from app.utils.update_display_name import update_display_name
 
 UPLOAD_DIR = "uploads"
 
@@ -75,7 +75,7 @@ def run():
                     structured = extract_fields(doc_type, ocr_text)
                     
                 print(doc_type)
-                print()
+                print(structured)
                 if "error" in structured:
                     raise Exception(structured["error"])
 

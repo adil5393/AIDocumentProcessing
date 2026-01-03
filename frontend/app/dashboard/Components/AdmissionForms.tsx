@@ -3,6 +3,7 @@ import { apiFetch } from "../../lib/api";
 import React from "react";
 import EditableCell from './EditableCell';
 import DocumentPreviewRow from "./DocumentPreviewRow";
+import PostStudentActionButton from "../Amtech/PostStudentActionButton"
 import './sidebar.css'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
@@ -101,8 +102,6 @@ export default function AdmissionForms() {
   /* ------------------ RENDER ------------------ */
   return (
     <>
-      <h3>Admission</h3>
-
       <div style={{ display: "flex", gap: 20 }}>
 
         {/* ================= LEFT PANE ================= */}
@@ -153,7 +152,6 @@ export default function AdmissionForms() {
 
         {/* ================= RIGHT PANE ================= */}
         <div style={{ width: "90%" }}>
-          <h4>Admission Forms</h4>
 
           <table className="table">
             <thead>
@@ -290,6 +288,11 @@ export default function AdmissionForms() {
           >
             {openPreviewId === r.file_id ? "Hide" : "Preview"}
           </button>
+          <PostStudentActionButton
+            sr={r.sr}
+            endpoint={`/api/amtech/${r.sr}/post`}  // 👈 your POST route
+            onSuccess={fetchAdmissionForms}
+          />
         </td>
       </tr>
 
