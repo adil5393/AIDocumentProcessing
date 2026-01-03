@@ -7,7 +7,7 @@ backend/venv/
 SampleFiles/
 backend/uploads/
 tempCodeRunnerFile.py
-olddata/
+backend/olddata/students.csv
 *.log
 __pycache__/
 .next/cache/
