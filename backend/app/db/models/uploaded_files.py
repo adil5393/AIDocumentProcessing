@@ -6,7 +6,8 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     CheckConstraint,
-    Index
+    Index,
+    text
 )
 from sqlalchemy.sql import func
 from backend.app.db.base import Base
@@ -18,8 +19,8 @@ class UploadedFile(Base):
     file_path = Column(Text, nullable=False)
     doc_type = Column(Text, nullable=False)
 
-    ocr_done = Column(Boolean, default=False)
-    extraction_done = Column(Boolean, default=False)
+    ocr_done = Column(Boolean, server_default=text("false"), nullable=False)
+    extraction_done = Column(Boolean, server_default=text("false"), nullable=False)
 
     created_at = Column(DateTime, server_default=func.now())
     ocr_at = Column(DateTime)
