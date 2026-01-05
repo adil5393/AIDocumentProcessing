@@ -19,7 +19,7 @@ from io import BytesIO
 from fastapi import BackgroundTasks
 from typing import List
 import threading, json
-import mimetypes
+import mimetypes, time
 import os
 import uuid
 from app.utils.pdftopng import generate_preview_image
@@ -1943,35 +1943,6 @@ def preview_image(
 
     return FileResponse(preview_path, media_type="image/jpeg")
 
-@router.get("/amtech/status")
-def amtech_status(_: str = Depends(require_token)):
-    from app.integrations.amtech_auth import load_token, is_token_valid
-    import time
-
-    token, expiry, user_id, branches = load_token()
-    print(token)
-    if not token or not user_id:
-        return {
-            "connected": False,
-            "reason": "no_token"
-        }
-
-    valid, fetched_branches = is_token_valid(token, user_id)
-    print(valid)
-    return {
-        "connected": bool(valid and expiry > time.time()),
-        "user_id": user_id,
-        "branches": fetched_branches or branches,
-        "expires_at": expiry,
-        "expires_in_seconds": int(expiry - time.time()) if expiry else None
-    }
-
-@router.post("/amtech/reconnect")
-def reconnect(_: str = Depends(require_token)):
-    from app.integrations.amtech_auth import authenticate
-    authenticate()
-    return {"status": "reconnected"}
-
 @router.get("/students/crossreview")
 def students_overview(
     _: str = Depends(require_token),
@@ -2038,3 +2009,70 @@ def students_overview(
 
     rows = db.execute(sql).mappings().all()
     return rows
+
+
+@router.get("/amtech/status")
+def amtech_status(_: str = Depends(require_token)):
+    from app.integrations.amtech_runtime import ensure_amtech_connection
+
+    state = ensure_amtech_connection()
+
+    return {
+        "connected": state["connected"],
+        "user_id": state["user_id"],
+        "branches": state["branches"],
+        "expires_at": state["expiry"],
+        "expires_in_seconds": int(state["expiry"] - time.time())
+    }  
+@router.post("/amtech/reconnect")
+def reconnect(_: str = Depends(require_token)):
+    from app.integrations.amtech_auth import authenticate
+    authenticate()
+    return {"status": "reconnected"}
+
+@router.get("/amtech/masters")
+def get_amtech_masters(_: str = Depends(require_token)):
+    from app.integrations.amtech_masters import get_amtech_masters_internal
+    return get_amtech_masters_internal()
+
+from fastapi import Body
+@router.post("/amtech/dummy-post")
+def dummy_post(confirm: bool = False, _: str = Depends(require_token),  body: dict = Body(default={})):
+    import time
+    import os
+    from fastapi import HTTPException
+    from app.integrations.amtech_auth import load_token
+    from app.integrations.amtech_client import amtech_post
+    from app.integrations.amtech_masters import get_amtech_masters_internal
+    from app.integrations.build_admission_payload import build_dummy_admission_payload
+
+    # 🔐 Extra safety (recommended)
+    if confirm and os.getenv("ALLOW_DUMMY_POST") != "true":
+        raise HTTPException(403, "Dummy posting is disabled")
+
+    # 1. Get masters snapshot
+    masters = get_amtech_masters_internal()
+
+    # 2. Build dummy payload
+    payload = build_dummy_admission_payload(masters)
+
+    # 3. Dry run (default)
+    if not confirm:
+        return {
+            "mode": "dry-run",
+            "payload": payload
+        }
+
+    # 4. REAL POST (only if confirm=true)
+    token, _, _, _ = load_token()
+
+    response = amtech_post(
+        "/api/v1/sms/student",
+        token,
+        payload
+    )
+
+    return {
+        "mode": "posted",
+        "response": response
+    }
