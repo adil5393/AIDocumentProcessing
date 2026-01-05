@@ -2035,9 +2035,9 @@ def get_amtech_masters(_: str = Depends(require_token)):
     from app.integrations.amtech_masters import get_amtech_masters_internal
     return get_amtech_masters_internal()
 
-from fastapi import Body
-@router.post("/amtech/dummy-post")
-def dummy_post(confirm: bool = False, _: str = Depends(require_token),  body: dict = Body(default={})):
+# from fastapi import Body
+# @router.post("/amtech/dummy-post")
+# def dummy_post(confirm: bool = False, _: str = Depends(require_token),  body: dict = Body(default={})):
     import time
     import os
     from fastapi import HTTPException
@@ -2076,3 +2076,43 @@ def dummy_post(confirm: bool = False, _: str = Depends(require_token),  body: di
         "mode": "posted",
         "response": response
     }
+
+@router.post("/amtech/{sr:path}/post")
+def post_admission_to_amtech(
+    sr: str,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db)
+):
+    from app.integrations.amtech_auth import load_token
+    from app.db.post_admission import post_admission
+    from app.integrations.amtech_client import amtech_post
+    from app.integrations.build_admission_payload import build_amtech_admission_payload 
+    from app.integrations.amtech_masters import get_amtech_masters_internal
+    masters = get_amtech_masters_internal()
+    payload = post_admission(sr,db)
+    post_payload = build_amtech_admission_payload(payload["data"], masters)
+    
+    # if not confirm:
+    #     return {
+    #         "mode": "dry-run",
+    #         "payload": post_payload
+    #     }
+    # return {
+    #         "mode": "dry-run",
+    #         "payload": post_payload
+    #     }
+
+    # 4. REAL POST (only if confirm=true)
+    token, _, _, _ = load_token()
+
+    response = amtech_post(
+        os.getenv("AMTECH_CREATE_STUDENT"),
+        token,
+        post_payload
+    )
+
+    return {
+        "mode": "posted",
+        "response": response
+    }
+    
