@@ -1,13 +1,16 @@
 from pdf2image import convert_from_path
 from pathlib import Path
 from dotenv import load_dotenv
-import os
+import os, sys
 
 load_dotenv()
 
 
 PREVIEW_DIR = Path(os.getenv("PREVIEW_DIR", "uploads\\previews"))
-POPPLER_PATH = Path(r"C:\poppler-25.12.0\Library\bin")          #Poppler Path
+if sys.platform.startswith("win"):
+    POPPLER_PATH = Path(r"C:\poppler-25.12.0\Library\bin")
+else:
+    POPPLER_PATH = Path(os.getenv("POPPLER_PATH", "/usr/bin"))         #Poppler Path
 
 def generate_preview_image(pdf_path: str) -> str:
     pdf_path = Path(pdf_path)

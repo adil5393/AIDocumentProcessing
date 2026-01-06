@@ -5,7 +5,7 @@ import os
 load_dotenv()
 
 
-AMTECH_BASE_URL = os.getenv("AMTECH_BASE_URL")
+AMTECH_BASE_URL = os.getenv('AMTECH_BASE_URL')
 
 def amtech_get(path: str, token: str, params: dict | None = None):
     """
@@ -48,7 +48,7 @@ def amtech_post(path: str, token: str, data: list):
     import requests
     from fastapi import HTTPException
 
-    url = f"{os.getenv("AMTECH_BASE_URL")}{path}"
+    url = f"{AMTECH_BASE_URL}{path}"
 
     headers = {
         "Authorization": f"Bearer {token}"

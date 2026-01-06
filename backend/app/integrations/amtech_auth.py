@@ -8,8 +8,8 @@ load_dotenv()
 TOKEN_FILE = "token_cache.json"
 TOKEN_EXPIRY_FILE = "token_expiry.json"
 
-BASE_URL = os.getenv("BASE_URL")
-LOGIN_URL = f"{BASE_URL}{os.getenv("LOGIN_URL_EXTENSION")}"
+BASE_URL = os.getenv('BASE_URL')
+LOGIN_URL = f"{BASE_URL}{os.getenv('LOGIN_URL_EXTENSION')}"
 TOKEN_VALIDATION_URL = f"{BASE_URL}{os.getenv("TOKEN_VALIDATION_URL_EXTENSION")}"
 
 AMTECH_USERNAME = os.getenv("AMTECH_USERNAME")
