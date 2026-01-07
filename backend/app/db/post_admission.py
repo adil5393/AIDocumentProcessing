@@ -1,10 +1,7 @@
 from fastapi import HTTPException
 
 def post_admission(sr: str,db):
-    
     from sqlalchemy import text
-
-
     row = db.execute(
         text("""
             SELECT *

@@ -4,6 +4,7 @@ import DocumentPreviewRow from "./DocumentPreviewRow";
 import MarksheetCandidates from "./MarksheetCandidates";
 import MarksheetsConfirmed from "./MarksheetsConfirmed";
 import { apiFetch } from "../../lib/api";
+import { matchesSearch } from "../Utils/Search";
 
 interface MarksheetRow {
   doc_id: number;
@@ -14,8 +15,12 @@ interface MarksheetRow {
   dob: string;
   lookup_status?: string;
 }
+type Props = {
+API_BASE : string;
+search : string;
+}
 
-export default function Marksheets({ API_BASE }: { API_BASE: string }) {
+export default function Marksheets({ API_BASE, search }: Props) {
   const [rows, setRows] = useState<MarksheetRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
@@ -27,6 +32,7 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
     setRows(data);
   };
 
+const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
   const rerunLookup = async (docId: number) => {
     await apiFetch(`${API_BASE}/api/marksheets/${docId}/lookup`, {
       method: "POST",
@@ -39,6 +45,8 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
     });
     fetchMarksheets();
   };
+
+  
 
   useEffect(() => {
     fetchMarksheets();
@@ -67,7 +75,7 @@ export default function Marksheets({ API_BASE }: { API_BASE: string }) {
           </thead>
 
           <tbody>
-            {rows.map((r) => (
+            {filteredRows.map((r) => (
               <React.Fragment key={r.doc_id}>
                 <tr>
                   <td>

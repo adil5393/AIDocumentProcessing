@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useRouter } from "next/navigation";
+import { matchesSearch } from "../Utils/Search";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -22,8 +23,11 @@ type StudentOverview = {
   birth_certificate_name: string | null;
   birth_certificate_confirmed: boolean | null;
 };
+type Props = {
+search: string;
+}
 
-export default function CrossReview() {
+export default function CrossReview({search}:Props) {
   const [students, setStudents] = useState<StudentOverview[]>([]);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +85,8 @@ export default function CrossReview() {
     loadStudents();
   }, []);
 
+  const filteredRows = students.filter(r => matchesSearch(search, r.tc_name, r.admission_name, r.birth_certificate_name, r.aadhaar_name, r.sr ))
+
   return (
     <div style={{ padding: 12 }}>
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -99,7 +105,7 @@ export default function CrossReview() {
         </thead>
 
         <tbody>
-          {students.map(row => {
+          {filteredRows.map(row => {
             const admission = row.admission_name.toLowerCase();
 
             return (

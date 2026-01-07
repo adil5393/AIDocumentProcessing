@@ -35,6 +35,7 @@ export default function Dashboard() {
   const [uploadedFiles, setUploadedFiles] = useState<FileRow[]>([]);
   const [layoverFile, setLayoverFile] = useState<FileRow | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
 
   function exportExcel() {
     apiFetch(`${API_BASE}/api/export/student-documents.xlsx`)
@@ -96,6 +97,9 @@ export default function Dashboard() {
 useEffect(() => {
   console.log("layoverFile", layoverFile);
 }, [layoverFile]);
+useEffect(() => {
+  setSearch("");
+}, [tab]);
 
   const handleUpload = async () => {
   if (selectedFiles.length === 0) {
@@ -194,30 +198,32 @@ useEffect(() => {
   
 
 {/* TABS */}
-<div className="tabs">
-  <button className={`tab ${tab === "files" ? "active" : ""}`} onClick={() => setTab("files")}>
-    Files
-  </button>
-  <button className={`tab ${tab === "admission" ? "active" : ""}`} onClick={() => setTab("admission")}>
-    Admission Forms
-  </button>
-  <button className={`tab ${tab === "aadhaar" ? "active" : ""}`} onClick={() => setTab("aadhaar")}>
-    Aadhaar
-  </button>
-  <button className={`tab ${tab === "tc" ? "active" : ""}`} onClick={() => setTab("tc")}>
-    Transfer Certificates
-  </button>
-  <button className={`tab ${tab === "marksheets" ? "active" : ""}`} onClick={() => setTab("marksheets")}>
-    Marksheets
-  </button>
-  <button className={`tab ${tab === "birth_certificates" ? "active" : ""}`} onClick={() => setTab("birth_certificates")}>
-    Birth Certificates
-  </button>
-  <button className={`tab ${tab === "cross_review" ? "active" : ""}`} onClick={() => setTab("cross_review")}>
-    Cross Review
-  </button>
-  
-</div>
+  <div className="tabs-row">
+    <div className="tabs">
+      <button className={`tab ${tab === "files" ? "active" : ""}`} onClick={() => setTab("files")}>Files</button>
+      <button className={`tab ${tab === "admission" ? "active" : ""}`} onClick={() => setTab("admission")}>Admission Forms</button>
+      <button className={`tab ${tab === "aadhaar" ? "active" : ""}`} onClick={() => setTab("aadhaar")}>Aadhaar</button>
+      <button className={`tab ${tab === "tc" ? "active" : ""}`} onClick={() => setTab("tc")}>Transfer Certificates</button>
+      <button className={`tab ${tab === "marksheets" ? "active" : ""}`} onClick={() => setTab("marksheets")}>Marksheets</button>
+      <button className={`tab ${tab === "birth_certificates" ? "active" : ""}`} onClick={() => setTab("birth_certificates")}>Birth Certificates</button>
+      <button className={`tab ${tab === "cross_review" ? "active" : ""}`} onClick={() => setTab("cross_review")}>Cross Review</button>
+    </div>
+
+    {/* SEARCH BAR */}
+    <input
+      className="tab-search"
+      type="text"
+      placeholder={
+        tab === "admission"
+          ? "Search name / SR…"
+          : tab === "cross_review"
+          ? "Search student…"
+          : "Search…"
+      }
+      value={search}
+      onChange={(e) => setSearch(e.target.value)}
+    />
+  </div>
       <div>
         {layoverFile &&  (
          <AdmissionLayoverModal
@@ -238,26 +244,28 @@ useEffect(() => {
 />
         )}
         {tab === "admission" && (
-          <AdmissionForms />
+          <AdmissionForms search={search}/>
         )}
         {tab === "aadhaar" && (
           <Aadhaars
             selectedDocId={selectedDocId}
+            search={search}
             onSelectDoc={(docId: number) =>
               setSelectedDocId(docId === selectedDocId ? null : docId)
             }
           />
         )}
-        {tab === "tc" && <TransferCerts />}
-        {tab === "cross_review" && <CrossReview />}
-        {tab === "marksheets" && <Marksheets API_BASE={API_BASE}/>}
-        {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE}/>}
+        {tab === "tc" && <TransferCerts search={search}/>}
+        {tab === "cross_review" && <CrossReview search={search} />}
+        {tab === "marksheets" && <Marksheets API_BASE={API_BASE} search = {search}/>}
+        {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE} search = {search}/>}
       </div>
         {tab === "files" && (
           <Files
             files={uploadedFiles}
             reloadFiles={loadFiles}
             openLayover={(file) => setLayoverFile(file)}
+            search = {search}
           />
         )}
       <br />

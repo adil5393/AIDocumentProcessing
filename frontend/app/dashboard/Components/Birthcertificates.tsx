@@ -4,6 +4,7 @@ import DocumentPreviewRow from "./DocumentPreviewRow";
 import BirthCertificateCandidates from "./BirthCertificateCandidates";
 import BirthCertificateMatches from "./BirthCertificateMatches";
 import { apiFetch } from "../../lib/api";
+import { matchesSearch } from "../Utils/Search";
 
 interface BirthCertificateRow {
   doc_id: number;
@@ -14,8 +15,12 @@ interface BirthCertificateRow {
   dob: string;
   lookup_status?: string;
 }
+type Props = {
+API_BASE : string,
+search : string,
+}
 
-export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
+export default function BirthCertificates({ API_BASE, search }: Props) {
   const [rows, setRows] = useState<BirthCertificateRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
@@ -32,6 +37,7 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
       method: "POST",
     });
   };
+  const filteredRows = rows.filter(r => matchesSearch(search, r.student_name))
 
   const runPendingLookups = async () => {
     await apiFetch(`${API_BASE}/api/bc/lookup/pending`, {
@@ -67,7 +73,7 @@ export default function BirthCertificates({ API_BASE }: { API_BASE: string }) {
           </thead>
 
           <tbody>
-            {rows.map((r) => (
+            {filteredRows.map((r) => (
               <React.Fragment key={r.doc_id}>
                 <tr>
                   <td>

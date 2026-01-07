@@ -5,10 +5,10 @@ import EditableCell from './EditableCell';
 import DocumentPreviewRow from "./DocumentPreviewRow";
 import PostStudentActionButton from "../Amtech/PostStudentActionButton"
 import './sidebar.css'
-
+import { matchesSearch } from "../Utils/Search";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
-export default function AdmissionForms() {
+export default function AdmissionForms({ search }: { search: string }) {
   /* ------------------ STATE ------------------ */
   const [rows, setRows] = useState<any[]>([]);
   const [reservedSRs, setReservedSRs] = useState<any[]>([]);
@@ -40,6 +40,15 @@ export default function AdmissionForms() {
     const interval = setInterval(fetchReservedSRs, 5000);
     return () => clearInterval(interval);
   }, []);
+
+
+  const filteredRows = rows.filter(r =>
+  matchesSearch(
+    search,
+    r.student_name,
+    r.sr
+  )
+);
 
   async function cleanupExpiredSRs() {
     const res = await apiFetch(
@@ -177,7 +186,7 @@ export default function AdmissionForms() {
             </thead>
 
             <tbody>
-  {rows.map(r => (
+  {filteredRows.map(r => (
     <React.Fragment key={r.sr}>
       <tr>
         <td><EditableCell

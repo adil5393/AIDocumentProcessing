@@ -7,6 +7,8 @@ import TransferCertificateCandidates from "./TransferCertificateCandidates";
 import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
 import TransferCertificatesConfirmed from "./TransferCertificatesConfirmed";
+import { matchesSearch } from "../Utils/Search";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
@@ -20,9 +22,11 @@ type TCRow = {
   last_class_studied: string | null;
   last_school_name: string | null;
 };
+type Props ={
+  search: string;
+};
 
-
-export default function TransferCerts() {
+export default function TransferCerts({search}: Props) {
   const [rows, setRows] = useState<TCRow[]>([]);
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
@@ -45,7 +49,7 @@ useEffect(() => {
   setOpenPreviewDocId(null);
 }, [expandedDocId]);
 
-
+  const filteredrows = rows.filter( r => matchesSearch(search, r.student_name))
   function fetchTransferCerts() {
     apiFetch(`${API_BASE}/api/transfer-certificates`)
       .then(res => res.json())
@@ -93,7 +97,7 @@ useEffect(() => {
             </tr>
           </thead>
           <tbody>
-            {rows.map((r) => (
+            {filteredrows.map((r) => (
               <React.Fragment key={r.doc_id}>
                 <tr key={`${r.doc_id}-row`}>
                   <td>

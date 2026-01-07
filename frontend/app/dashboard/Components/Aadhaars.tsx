@@ -6,6 +6,7 @@ import { apiFetch } from "../../lib/api";
 import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
 import DocumentPreviewRow from "./DocumentPreviewRow";
+import { matchesSearch } from "../Utils/Search";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarRow = {
@@ -22,9 +23,10 @@ type AadhaarRow = {
 type Props = {
   selectedDocId: number | null;
   onSelectDoc: (docId: number) => void;
+  search: string;
 };
 
-export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
+export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) {
   const [rows, setRows] = useState<AadhaarRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
@@ -46,6 +48,14 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
 
   fetchAadhaarDocuments();
 }
+  const filteredRows = rows.filter(r =>
+  matchesSearch(
+    search,
+    r.name,
+  )
+);
+
+  
 
   async function rerunLookup(docId: number) {
     await apiFetch(
@@ -84,7 +94,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc }: Props) {
           </thead>
 
          <tbody>
-          {rows.map(r => (
+          {filteredRows.map(r => (
           <React.Fragment key={r.doc_id}>
             <tr>
               <td>{r.name}</td>

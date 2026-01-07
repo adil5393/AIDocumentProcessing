@@ -239,7 +239,38 @@
 .status-error {
   color: #e74c3c;
 }
+.dashboard-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #0f1115;
+  padding-bottom: 8px;
+}
 
+/* TABS + SEARCH ROW */
+.tabs-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+/* SEARCH INPUT */
+.tab-search {
+  width: 260px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: 1px solid #2a2f45;
+  background: #151821;
+  color: #e6e6e6;
+  font-size: 14px;
+}
+
+/* prevent overlap with content */
+.dashboard > :not(.dashboard-header) {
+  position: relative;
+}
 /* ===== Signal badges ===== */
 .status-cell {
   padding: 0 !important;
