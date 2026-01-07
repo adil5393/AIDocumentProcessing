@@ -24,15 +24,16 @@ def run():
     db = SessionLocal()
     try:
         files = db.execute(text("""
-            SELECT file_id, file_path, extracted_raw
+            SELECT file_id, file_path, extracted_raw, display_name
             FROM uploaded_files
             WHERE extraction_done = false
             ORDER BY created_at
         """)).fetchall()
 
-        for file_id, file_path, extracted_raw in files:
+        for file_id, file_path, extracted_raw, display_name in files:
             full_path = os.path.join(UPLOAD_DIR, file_path)
-
+            if (display_name and 'PENDING_ADMISSION' in display_name):
+                continue
             try:
                 # ------------------
                 # 1️⃣ OCR
