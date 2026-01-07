@@ -18,7 +18,15 @@ class TCMatch(Base):
     id = Column(Integer, primary_key=True)
 
     # REFERENCES
-    sr_number = Column(Text, nullable=False)
+    sr_number = Column(
+        Text,
+        ForeignKey(
+            "admission_forms.sr",
+            onupdate="CASCADE",
+            ondelete="CASCADE"
+        ),
+        nullable=False
+    )
 
     tc_doc_id = Column(
         Integer,

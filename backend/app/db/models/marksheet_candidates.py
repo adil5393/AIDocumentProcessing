@@ -32,7 +32,8 @@ class MarksheetCandidate(Base):
         Text,
         ForeignKey(
             "admission_forms.sr",
-            ondelete="CASCADE"
+            ondelete="CASCADE",
+            onupdate="CASCADE"
         ),
         nullable=False
     )

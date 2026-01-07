@@ -83,8 +83,6 @@ export default function CrossReview() {
 
   return (
     <div style={{ padding: 12 }}>
-      <h2>Student Cross Review</h2>
-
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       <table className="table">
@@ -92,10 +90,10 @@ export default function CrossReview() {
           <tr>
             <th>SR</th>
             <th>Student</th>
-            <th>Aadhaar</th>
-            <th>TC</th>
-            <th>Marksheet</th>
-            <th>Birth Certificate</th>
+            <th className="center">Aadhaar</th>
+            <th className="center">TC</th>
+            <th className="center">Marksheet</th>
+            <th className="center">Birth Certificate</th>
             <th>Action</th>
           </tr>
         </thead>
