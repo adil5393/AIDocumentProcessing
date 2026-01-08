@@ -1,5 +1,5 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Query
 from pydantic import BaseModel
 from fastapi.responses import FileResponse
 from fastapi import APIRouter
@@ -70,7 +70,6 @@ def list_files(
         FROM uploaded_files
         ORDER BY created_at DESC
     """)).fetchall()
-
     return [
         {
             "file_id": r.file_id,
@@ -304,9 +303,15 @@ def delete_file(
 
 @router.get("/admission-forms")
 def list_admission_forms(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
     rows = db.execute(text("""
         SELECT
             sr,
@@ -328,32 +333,33 @@ def list_admission_forms(
             created_at,
             file_id
         FROM admission_forms
+        WHERE (
+            :search IS NULL
+            OR sr ILIKE '%' || :search || '%'
+            OR student_name ILIKE '%' || :search || '%'
+            OR father_name ILIKE '%' || :search || '%'
+        )
         ORDER BY created_at DESC
-    """)).fetchall()
+        LIMIT :limit OFFSET :offset
+    """),
+        {"limit": page_size, "offset": offset,"search":search}
+    ).mappings().all()
+    total = db.execute(
+        text("""SELECT COUNT(*)
+            FROM admission_forms
+            WHERE (
+                :search IS NULL
+                OR sr ILIKE '%' || :search || '%'
+                OR student_name ILIKE '%' || :search || '%'
+            );"""),{"search":search}
+    ).scalar()
 
-    return [
-    {
-        "sr": r.sr,
-        "class": r.class_name,
-        "student_name": r.student_name,
-        "gender": r.gender,
-        "date_of_birth": r.date_of_birth,
-        "father_name": r.father_name,
-        "father_aadhaar":r.father_aadhaar,
-        "mother_name": r.mother_name,
-        "mother_aadhaar":r.mother_aadhaar,
-        "father_occupation": r.father_occupation,
-        "mother_occupation": r.mother_occupation,
-        "address": r.address,
-        "phone1": r.phone1,
-        "phone2": r.phone2,
-        "aadhaar_number": r.student_aadhaar_number,
-        "last_school_attended": r.last_school_attended,
-        "created_at": r.created_at,
-        "file_id": r.file_id
+    return {
+        "items": rows,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
     }
-    for r in rows
-]
 
 @router.get("/aadhaar-documents")
 def list_aadhaar_documents(

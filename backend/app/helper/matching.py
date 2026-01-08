@@ -3,6 +3,21 @@ from datetime import date
 
 STOPWORDS = {}
 
+def split_compound(token: str, other_tokens: list[str]) -> list[str]:
+    """
+    Split token if it contains other known tokens as substrings
+    """
+    parts = []
+    remaining = token
+
+    for ot in sorted(other_tokens, key=len, reverse=True):
+        if ot in remaining and len(ot) >= 3:
+            parts.append(ot)
+            remaining = remaining.replace(ot, " ")
+
+    leftovers = remaining.split()
+    return parts + leftovers
+
 def normalize_name(name: str) -> list[str]:
     if not name:
         return []
@@ -33,15 +48,26 @@ def name_similarity(tokens1, tokens2) -> float:
     if not tokens1 or not tokens2:
         return 0.0
 
+    # 🔥 NEW: expand compound tokens
+    expanded1 = []
+    for t in tokens1:
+        expanded1.extend(split_compound(t, tokens2))
+
+    expanded2 = []
+    for t in tokens2:
+        expanded2.extend(split_compound(t, tokens1))
+
     matched = 0.0
     used = set()
 
-    for t1 in tokens1:
+    for t1 in expanded1:
         best = 0.0
         best_t2 = None
-        for t2 in tokens2:
+
+        for t2 in expanded2:
             if t2 in used:
                 continue
+
             s = approx_match_score(t1, t2)
             if s > best:
                 best = s
@@ -52,7 +78,8 @@ def name_similarity(tokens1, tokens2) -> float:
             if best_t2:
                 used.add(best_t2)
 
-    return matched / max(len(tokens1), len(tokens2))
+    return matched / max(len(expanded1), len(expanded2))
+
 
 def calculate_age(dob):
     if not dob:

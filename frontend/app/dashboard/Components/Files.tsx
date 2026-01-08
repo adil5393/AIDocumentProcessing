@@ -9,6 +9,7 @@ type FilesProps = {
   files: FileRow[];
   reloadFiles: () => void;
   openLayover: (file: FileRow) => void;
+  search: string;
 };
 
 type FileRow = {

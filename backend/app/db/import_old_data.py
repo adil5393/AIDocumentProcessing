@@ -11,10 +11,25 @@ import re
 # =========================
 load_dotenv()
 
+ROMAN_CLASS_MAP = {
+    "I": "1",
+    "II": "2",
+    "III": "3",
+    "IV": "4",
+    "V": "5",
+    "VI": "6",
+    "VII": "7",
+    "VIII": "8",
+    "IX": "9",
+    "X": "10",
+    "XI":"11",
+    "XII":"12"
+}
+
 CSV_PATH = os.getenv("OLD_DATA")  # path to your CSV
 BRANCH_ID = 1               # change if needed
 RESERVED_BY = 0             # system user
-STATUS = "reserved"             # free | reserved | confirmed
+STATUS = "confirmed"             # free | reserved | confirmed
 
 DB_HOST=os.getenv("DB_HOST")
 DB_PORT=os.getenv("DB_PORT")
@@ -35,6 +50,21 @@ DB_CONFIG = {
 # SCRIPT
 # =========================
 from datetime import datetime
+def clean_class(value):
+    if not value:
+        return None
+
+    value = value.strip().upper()
+
+    # Roman numeral → string integer
+    if value in ROMAN_CLASS_MAP:
+        return ROMAN_CLASS_MAP[value]
+
+    # Already numeric → normalize to string
+    if value.isdigit():
+        return value
+
+    return None
 
 def clean_aadhaar(value):
     if not value:
@@ -151,7 +181,7 @@ def main():
                 )
             """, {
                 "sr": sr,
-                "class": row.get("Class"),
+                "class": clean_class(row.get("Class")),
                 "student_name": row.get("Student Name"),
                 "gender": row.get("Gender"),
                 "date_of_birth": parse_ddmmyyyy(row.get("Date Of Birth")),

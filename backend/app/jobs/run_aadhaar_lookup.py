@@ -96,6 +96,7 @@ def run_aadhaar_lookup(db, doc_id: int):
     # -------------------------
     # CARTESIAN SCORING
     # -------------------------
+    
     if not candidates:
         rows = db.execute(
         text("""

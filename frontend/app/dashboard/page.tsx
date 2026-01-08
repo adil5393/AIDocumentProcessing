@@ -161,7 +161,7 @@ useEffect(() => {
   return (
     <div className="dashboard">
       <h1 className="dashboard-title">Dashboard</h1>
-
+      <div className="dashboard-header">
 {/* ACTION BAR */}
 <div className="action-bar">
   <label className="file-picker">
@@ -224,6 +224,7 @@ useEffect(() => {
       onChange={(e) => setSearch(e.target.value)}
     />
   </div>
+</div>
       <div>
         {layoverFile &&  (
          <AdmissionLayoverModal

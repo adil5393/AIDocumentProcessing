@@ -118,52 +118,75 @@ def insert_admission_form(db,file_id, data):
 
         elif sr_status == "confirmed":
             if admission_exists:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Admission already exists for SR {sr}"
+                placeholder = db.execute(
+                    text("""
+                        SELECT uf.file_id
+                        FROM admission_forms af
+                        JOIN uploaded_files uf ON uf.file_id = af.file_id
+                        WHERE af.sr = :sr
+                        AND uf.file_path LIKE 'PENDING://%'
+                    """),
+                    {"sr": sr}
+                ).fetchone()
+                print(placeholder)
+                if not placeholder:
+                    raise HTTPException(
+                        status_code=409,
+                        detail=f"Admission for SR {sr} already has a real file attached"
+                    )
+                db.execute(
+                    text("""
+                        UPDATE admission_forms
+                        SET file_id = :new_file_id
+                        WHERE sr = :sr
+                    """),
+                    {
+                        "new_file_id": file_id,
+                        "sr": sr
+                    }
                 )
-
-            # Backfill case: SR already confirmed historically
-            db.execute(text("""
-                INSERT INTO admission_forms (
-                    sr,
-                    class,
-                    student_name,
-                    gender,
-                    date_of_birth,
-                    father_name,
-                    mother_name,
-                    father_occupation,
-                    mother_occupation,
-                    address,
-                    phone1,
-                    phone2,
-                    student_aadhaar_number,
-                    last_school_attended,
-                    file_id
-                )
-                VALUES (
-                    :sr,
-                    :class,
-                    :student_name,
-                    :gender,
-                    :date_of_birth,
-                    :father_name,
-                    :mother_name,
-                    :father_occupation,
-                    :mother_occupation,
-                    :address,
-                    :phone1,
-                    :phone2,
-                    :student_aadhaar_number,
-                    :last_school_attended,
-                    :file_id
-                )
-            """), {
-                **data,
-                "sr": sr,
-                "file_id":file_id
-            })
+            else:
+                # Backfill case: SR already confirmed historically
+                db.execute(text("""
+                    INSERT INTO admission_forms (
+                        sr,
+                        class,
+                        student_name,
+                        gender,
+                        date_of_birth,
+                        father_name,
+                        mother_name,
+                        father_occupation,
+                        mother_occupation,
+                        address,
+                        phone1,
+                        phone2,
+                        student_aadhaar_number,
+                        last_school_attended,
+                        file_id
+                    )
+                    VALUES (
+                        :sr,
+                        :class,
+                        :student_name,
+                        :gender,
+                        :date_of_birth,
+                        :father_name,
+                        :mother_name,
+                        :father_occupation,
+                        :mother_occupation,
+                        :address,
+                        :phone1,
+                        :phone2,
+                        :student_aadhaar_number,
+                        :last_school_attended,
+                        :file_id
+                    )
+                """), {
+                    **data,
+                    "sr": sr,
+                    "file_id":file_id
+                })
 
         else:
             raise HTTPException(

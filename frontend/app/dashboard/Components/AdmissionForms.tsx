@@ -6,23 +6,40 @@ import DocumentPreviewRow from "./DocumentPreviewRow";
 import PostStudentActionButton from "../Amtech/PostStudentActionButton"
 import './sidebar.css'
 import { matchesSearch } from "../Utils/Search";
+import { usePaginatedApi } from "../Pagination/PaginatedApi";
+import Pagination from "../Pagination/Pagination";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function AdmissionForms({ search }: { search: string }) {
   /* ------------------ STATE ------------------ */
-  const [rows, setRows] = useState<any[]>([]);
+  // const [rows, setRows] = useState<any[]>([]);
   const [reservedSRs, setReservedSRs] = useState<any[]>([]);
   const [srInput, setSrInput] = useState("");
   const [srMsg, setSrMsg] = useState("");
   const [openPreviewId, setOpenPreviewId] = useState<number | null>(null);
   const [zoom, setZoom] = useState(1.0);
 
+  const {
+      items: rows,
+      page,
+      total,
+      pageSize,
+      setPage,
+      loading,
+      refresh
+    } = usePaginatedApi<any>(
+    `${API_BASE}/api/admission-forms`,
+    search,
+    50,
+    [search] // 👈 dependency
+  );
+
   /* ------------------ FETCHERS ------------------ */
   function fetchAdmissionForms() {
-    apiFetch(`${API_BASE}/api/admission-forms`)
-      .then(res => res.json())
-      .then(setRows)
-      .catch(console.error);
+    // apiFetch(`${API_BASE}/api/admission-forms`)
+    //   .then(res => res.json())
+    //   .then(setRows)
+    //   .catch(console.error);
   }
 
   function fetchReservedSRs() {
@@ -186,7 +203,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             </thead>
 
             <tbody>
-  {filteredRows.map(r => (
+  {rows.map(r => (
     <React.Fragment key={r.sr}>
       <tr>
         <td><EditableCell
@@ -194,16 +211,16 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="sr"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           /></td>
 
         <td>
           <EditableCell
-            value={r.class}
+            value={r.class_name}
             id={r.sr}
             field="class"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -213,7 +230,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="student_name"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -225,7 +242,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="date_of_birth"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -235,7 +252,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="father_name"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -247,7 +264,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="mother_name"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -262,7 +279,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="phone1"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
@@ -272,16 +289,16 @@ export default function AdmissionForms({ search }: { search: string }) {
             id={r.sr}
             field="phone2"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           />
         </td>
 
         <td><EditableCell
-            value={r.aadhaar_number}
+            value={r.student_aadhaar_number}
             id={r.sr}
             field="student_aadhaar_number"
             endpoint="admission-forms"
-            onSaved={fetchAdmissionForms}
+            onSaved={refresh}
           /></td>
         <td>{r.last_school_attended}</td>
 
@@ -300,7 +317,7 @@ export default function AdmissionForms({ search }: { search: string }) {
           <PostStudentActionButton
             sr={r.sr}
             endpoint={`/api/amtech/${r.sr}/post`}  // 👈 your POST route
-            onSuccess={fetchAdmissionForms}
+            onSuccess={refresh}
           />
         </td>
       </tr>
@@ -317,9 +334,15 @@ export default function AdmissionForms({ search }: { search: string }) {
                 ))}
             </tbody>
           </table>
+          <Pagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+          />
         </div>
-
       </div>
+
     </>
   );
 }
