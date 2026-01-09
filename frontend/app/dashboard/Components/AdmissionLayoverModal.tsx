@@ -22,6 +22,7 @@ type AdmissionData = {
 
 type Props = {
   fileId: number;
+  docType: string; 
   initialData: Partial<AdmissionData>;
   error: string | null;
   onConfirm: (data: AdmissionData) => void;
@@ -31,6 +32,7 @@ type Props = {
 
 export default function AdmissionLayoverModal({
   fileId,
+  docType,
   initialData,
   error,
   onConfirm,
@@ -76,7 +78,9 @@ export default function AdmissionLayoverModal({
       {/* RIGHT: Review Panel */}
       <div className="review-panel">
 
-        <h2 className="modal-title">Admission Form Review</h2>
+        <h2 className="modal-title">
+          {docType.replace(/_/g, " ").toUpperCase()}
+        </h2>
 
         {error && (
           <div className="warning-box">
@@ -157,9 +161,9 @@ export default function AdmissionLayoverModal({
                 method: "POST",
                 body: JSON.stringify({ extracted_raw: form }),
               });
-onConfirm(form);
-onClose()
-            }}
+            onConfirm(form);
+            onClose()
+                        }}
           >
             ✅ Fix & Reprocess
           </button>

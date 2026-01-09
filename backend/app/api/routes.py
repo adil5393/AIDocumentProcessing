@@ -260,6 +260,7 @@ def delete_file(
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    # 1️⃣ Fetch file row
     row = db.execute(text("""
         SELECT file_path, extraction_done
         FROM uploaded_files
@@ -269,25 +270,52 @@ def delete_file(
     if not row:
         raise HTTPException(status_code=404, detail="File not found")
 
-    # if row.extraction_done:
-    #     raise HTTPException(
-    #         status_code=400,
-    #         detail="Cannot delete file after extraction"
-    #     )
-
     file_path = os.path.join(UPLOAD_DIR, row.file_path)
     p = Path(row.file_path)
     preview_path = os.path.join(PREVIEW_DIR, f"{p.stem}.jpg")
-    print(preview_path)
-    
+
     try:
-        # delete file from disk
+        # 2️⃣ Check if this file backs an admission
+        admission = db.execute(text("""
+            SELECT sr
+            FROM admission_forms
+            WHERE file_id = :file_id
+        """), {"file_id": file_id}).fetchone()
+
+        # 3️⃣ If admission-backed, try placeholder revert (best-effort)
+        if admission:
+            sr = admission.sr
+
+            placeholder = db.execute(text("""
+                SELECT file_id
+                FROM uploaded_files
+                WHERE display_name = :name
+                LIMIT 1
+            """), {
+                "name": f"PENDING_ADMISSION_FORM_{sr}"
+            }).fetchone()
+
+            if placeholder:
+                db.execute(text("""
+                    UPDATE admission_forms
+                    SET file_id = :new_file_id
+                    WHERE sr = :sr
+                      AND file_id = :old_file_id
+                """), {
+                    "new_file_id": placeholder.file_id,
+                    "sr": sr,
+                    "old_file_id": file_id
+                })
+            # else: no placeholder → continue with normal delete
+
+        # 4️⃣ Delete file from disk
         if os.path.exists(file_path):
             os.remove(file_path)
+
         if os.path.exists(preview_path):
             os.remove(preview_path)
 
-        # delete DB row
+        # 5️⃣ Delete DB row
         db.execute(text("""
             DELETE FROM uploaded_files
             WHERE file_id = :file_id
@@ -300,6 +328,7 @@ def delete_file(
         raise HTTPException(status_code=500, detail=str(e))
 
     return {"status": "deleted"}
+
 
 @router.get("/admission-forms")
 def list_admission_forms(

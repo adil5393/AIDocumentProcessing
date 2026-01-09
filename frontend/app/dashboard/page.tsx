@@ -32,7 +32,6 @@ export default function Dashboard() {
   const [tab, setTab] = useState<Tab>("files");
   const [status, setStatus] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [uploadedFiles, setUploadedFiles] = useState<FileRow[]>([]);
   const [layoverFile, setLayoverFile] = useState<FileRow | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -58,42 +57,14 @@ export default function Dashboard() {
         console.error(err);
       });
   }
-  const loadFiles = async () => {
-    const res = await apiFetch(`${API_BASE}/api/files`);
-    const data: FileRow[] = await res.json();
-    setUploadedFiles(data);
-  };
+  
 
   useEffect(() => {
     if (!isLoggedIn()) {
       window.location.href = "/login";
       return;
     }
-
-    loadFiles();
-  }, []);
- useEffect(() => {
-  if (!running) return;
-
-  const interval = setInterval(async () => {
-    const res = await apiFetch(`${API_BASE}/api/files`);
-    const data: FileRow[] = await res.json();
-
-    setUploadedFiles(data);
-
-    const allDone =
-      data.length > 0 &&
-      data.every(f => f.ocr_done && f.extraction_done);
-
-    if (allDone) {
-      setRunning(false);
-      setStatus("Pipeline completed ✅");
-      clearInterval(interval);
-    }
-  }, 1500);
-
-  return () => clearInterval(interval);
-}, [running]);
+  }, []); 
 useEffect(() => {
   console.log("layoverFile", layoverFile);
 }, [layoverFile]);
@@ -127,7 +98,6 @@ useEffect(() => {
 
     setStatus("Upload successful ✅");
     setSelectedFiles([]);
-    loadFiles();
   } catch {
     setStatus("Upload error");
   }
@@ -228,7 +198,7 @@ useEffect(() => {
       <div>
         {layoverFile &&  (
          <AdmissionLayoverModal
-  fileId={layoverFile.file_id}
+  fileId={layoverFile.file_id} docType={layoverFile.doc_type}
   initialData={
     typeof layoverFile.extracted_raw === "string"
       ? JSON.parse(layoverFile.extracted_raw)
@@ -263,8 +233,6 @@ useEffect(() => {
       </div>
         {tab === "files" && (
           <Files
-            files={uploadedFiles}
-            reloadFiles={loadFiles}
             openLayover={(file) => setLayoverFile(file)}
             search = {search}
           />

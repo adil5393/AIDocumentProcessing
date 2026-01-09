@@ -1,13 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { apiFetch } from "../../lib/api";
 import "./dashboard.css";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FilesProps = {
-  files: FileRow[];
-  reloadFiles: () => void;
   openLayover: (file: FileRow) => void;
   search: string;
 };
@@ -23,8 +22,59 @@ type FileRow = {
   extraction_error: string | null;
 };
 
-export default function Files({ files,reloadFiles,openLayover,
+export default function Files({openLayover,search
 }: FilesProps) {
+  const [files, setFiles] = useState<FileRow[]>([]);
+  const [polling, setPolling] = useState(false);
+
+  const loadFiles = async () => {
+    const res = await apiFetch(`${API_BASE}/api/files`);
+    const data: FileRow[] = await res.json();
+    setFiles(data);
+  };
+  useEffect(() => {
+    loadFiles();
+  }, []);
+
+
+  useEffect(() => {
+    if (!polling) return;
+
+    const interval = setInterval(async () => {
+      const res = await apiFetch(`${API_BASE}/api/files`);
+      const data: FileRow[] = await res.json();
+      setFiles(data);
+
+      const allDone =
+        data.length > 0 &&
+        data.every(f => f.ocr_done && f.extraction_done);
+
+      if (allDone) {
+        setPolling(false);
+        clearInterval(interval);
+      }
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [polling]);
+  useEffect(() => {
+  const hasPending = files.some(
+    f => !f.ocr_done || !f.extraction_done
+  );
+
+  if (hasPending) {
+    setPolling(true);
+  }
+}, [files]);
+const deleteFile = async (id: number) => {
+  if (!confirm("Delete this file?")) return;
+
+  await apiFetch(`${API_BASE}/api/files/${id}`, {
+    method: "DELETE",
+  });
+
+  loadFiles();
+};
   return (
     <table className="table">
       <thead>
@@ -37,6 +87,7 @@ export default function Files({ files,reloadFiles,openLayover,
         </tr>
       </thead>
       <tbody>
+       
         {files.map((f) => (
           <tr key={f.file_id}>
             <td>{f.display_name}</td>
@@ -57,21 +108,12 @@ export default function Files({ files,reloadFiles,openLayover,
               )}
             </td>
             <td>
-              <button
+              {<button
                 className="btn"
-                onClick={async () => {
-                  if (!confirm("Delete this file?")) return;
-
-                  await apiFetch(
-                    `${API_BASE}/api/files/${f.file_id}`,
-                    { method: "DELETE" }
-                  );
-
-                  reloadFiles();
-                }}
+                onClick={()=>{deleteFile(f.file_id)}}
               >
                 Delete
-              </button>
+              </button>}
             </td>
           </tr>
         ))}
