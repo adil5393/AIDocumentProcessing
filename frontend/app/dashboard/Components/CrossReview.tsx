@@ -6,86 +6,160 @@ import { useRouter } from "next/navigation";
 import { matchesSearch } from "../Utils/Search";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
-
-type StudentOverview = {
-  sr: string;
-  admission_name: string;
-
-  aadhaar_name: string | null;
-  aadhaar_confirmed: boolean | null;
-
-  tc_name: string | null;
-  tc_confirmed: boolean | null;
-
-  marksheet_name: string | null;
-  marksheet_confirmed: boolean | null;
-
-  birth_certificate_name: string | null;
-  birth_certificate_confirmed: boolean | null;
+type Status = "ok" | "mismatch" | "pending" | "missing";
+type PersonInfo = {
+  student_name: string | null;
+  father_name: string | null;
+  mother_name: string | null;
+  dob: string | null;
+  confirmed: boolean | null;
 };
-type Props = {
-search: string;
-}
 
-export default function CrossReview({search}:Props) {
-  const [students, setStudents] = useState<StudentOverview[]>([]);
-  const [error, setError] = useState<string | null>(null);
+type StudentRow = {
+  sr: string;
 
-  const router = useRouter();
+  admission: PersonInfo;
 
-  const StatusCell = ({
-    ok,
-    mismatch,
-  }: {
-    ok: boolean | null;
-    mismatch: boolean;
-  }) => (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        lineHeight: 1.2,
-        minHeight: 40,
-      }}
-    >
-      <span style={{ fontSize: 18 }}>
-        {ok ? "🟢" : "🔴"}
-      </span>
-
-      {mismatch && (
-        <span
-          style={{
-            color: "#b45309",
-            fontSize: 11,
-            marginTop: 2,
-            whiteSpace: "nowrap",
-          }}
-        >
-          ⚠ Name mismatch
-        </span>
-      )}
-    </div>
-  );
-
-  const loadStudents = async () => {
-    try {
-      const res = await apiFetch(
-        `${API_BASE}/api/students/crossreview`
-      );
-      if (!res.ok) throw new Error("Failed to load students");
-      setStudents(await res.json());
-    } catch (e: any) {
-      setError(e.message || "Failed to load students");
-    }
+  aadhaar: {
+    student: PersonInfo;
+    father: PersonInfo;
+    mother: PersonInfo;
   };
 
+  tc: PersonInfo;
+  marksheet: PersonInfo;
+  birth_certificate: PersonInfo;
+};
+
+function mapRow(r: any): StudentRow {
+  return {
+    sr: r.sr,
+
+    admission: {
+      student_name: r.admission_student_name,
+      father_name: r.admission_father_name,
+      mother_name: r.admission_mother_name,
+      dob: r.admission_dob,
+      confirmed: true,
+    },
+
+    aadhaar: {
+      student: {
+        student_name: r.aadhaar_student_name,
+        father_name: null,
+        mother_name: null,
+        dob: r.aadhaar_dob,
+        confirmed: r.aadhaar_student_confirmed,
+      },
+      father: {
+        student_name: r.aadhaar_father_name,
+        father_name: null,
+        mother_name: null,
+        dob: null,
+        confirmed: r.aadhaar_father_confirmed,
+      },
+      mother: {
+        student_name: r.aadhaar_mother_name,
+        father_name: null,
+        mother_name: null,
+        dob: null,
+        confirmed: r.aadhaar_mother_confirmed,
+      },
+    },
+
+    tc: {
+      student_name: r.tc_student_name,
+      father_name: r.tc_father_name,
+      mother_name: r.tc_mother_name,
+      dob: r.tc_dob,
+      confirmed: r.tc_confirmed,
+    },
+
+    marksheet: {
+      student_name: r.marksheet_student_name,
+      father_name: r.marksheet_father_name,
+      mother_name: r.marksheet_mother_name,
+      dob: r.marksheet_dob,
+      confirmed: r.marksheet_confirmed,
+    },
+
+    birth_certificate: {
+      student_name: r.bc_student_name,
+      father_name: r.bc_father_name,
+      mother_name: r.bc_mother_name,
+      dob: r.bc_dob,
+      confirmed: r.bc_confirmed,
+    },
+  };
+}
+
+function normalize(v: string | null) {
+  return v?.toLowerCase().replace(/\s+/g, " ").trim() || null;
+}
+
+function computeStatus(
+  admission: PersonInfo,
+  doc: PersonInfo
+): Status {
+  if (!doc.student_name) return "missing";
+  if (!doc.confirmed) return "pending";
+
+  if (
+    normalize(admission.student_name) !== normalize(doc.student_name) ||
+    normalize(admission.father_name) !== normalize(doc.father_name) ||
+    normalize(admission.mother_name) !== normalize(doc.mother_name) ||
+    admission.dob !== doc.dob
+  ) {
+    return "mismatch";
+  }
+
+  return "ok";
+}
+
+
+const StatusCell = ({ status }: { status: Status }) => {
+  const map: Record<Status, string> = {
+    ok: "🟢",
+    mismatch: "🔴",
+    pending: "⏳",
+    missing: "⚪",
+  };
+
+  return (
+    <div style={{ fontSize: 18, textAlign: "center" }}>
+      {map[status]}
+    </div>
+  );
+};
+
+
+export default function CrossReview({ search }: { search: string }) {
+  const [rows, setRows] = useState<StudentRow[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+
   useEffect(() => {
-    loadStudents();
+    (async () => {
+      try {
+        const res = await apiFetch(
+          `${API_BASE}/api/students/crossreview`
+        );
+        if (!res.ok) throw new Error("Failed to load");
+        const raw = await res.json();
+        setRows(raw.map(mapRow));
+      } catch (e: any) {
+        setError(e.message);
+      }
+    })();
   }, []);
 
-  const filteredRows = students.filter(r => matchesSearch(search, r.tc_name, r.admission_name, r.birth_certificate_name, r.aadhaar_name, r.sr ))
+  const filtered = rows.filter(r =>
+    matchesSearch(
+      search,
+      r.admission.student_name,
+      r.sr
+    )
+  );
 
   return (
     <div style={{ padding: 12 }}>
@@ -99,77 +173,62 @@ export default function CrossReview({search}:Props) {
             <th className="center">Aadhaar</th>
             <th className="center">TC</th>
             <th className="center">Marksheet</th>
-            <th className="center">Birth Certificate</th>
+            <th className="center">Birth Cert</th>
             <th>Action</th>
           </tr>
         </thead>
 
         <tbody>
-          {filteredRows.map(row => {
-            const admission = row.admission_name.toLowerCase();
+          {filtered.map(r => (
+            <tr key={r.sr}>
+              <td>{r.sr}</td>
+              <td><strong>{r.admission.student_name}</strong></td>
 
-            return (
-              <tr key={row.sr}>
-                <td>{row.sr}</td>
+              <td>
+                <StatusCell
+                  status={computeStatus(
+                    r.admission,
+                    r.aadhaar.student
+                  )}
+                />
+              </td>
 
-                <td>
-                  <strong>{row.admission_name}</strong>
-                </td>
+              <td>
+                <StatusCell
+                  status={computeStatus(r.admission, r.tc)}
+                />
+              </td>
 
-                <td style={{ textAlign: "center" }}>
-                  <StatusCell
-                    ok={row.aadhaar_confirmed}
-                    mismatch={
-                      !!row.aadhaar_name &&
-                      admission !== row.aadhaar_name.toLowerCase()
-                    }
-                  />
-                </td>
+              <td>
+                <StatusCell
+                  status={computeStatus(
+                    r.admission,
+                    r.marksheet
+                  )}
+                />
+              </td>
 
-                <td style={{ textAlign: "center" }}>
-                  <StatusCell
-                    ok={row.tc_confirmed}
-                    mismatch={
-                      !!row.tc_name &&
-                      admission !== row.tc_name.toLowerCase()
-                    }
-                  />
-                </td>
+              <td>
+                <StatusCell
+                  status={computeStatus(
+                    r.admission,
+                    r.birth_certificate
+                  )}
+                />
+              </td>
 
-                <td style={{ textAlign: "center" }}>
-                  <StatusCell
-                    ok={row.marksheet_confirmed}
-                    mismatch={
-                      !!row.marksheet_name &&
-                      admission !== row.marksheet_name.toLowerCase()
-                    }
-                  />
-                </td>
-
-                <td style={{ textAlign: "center" }}>
-                  <StatusCell
-                    ok={row.birth_certificate_confirmed}
-                    mismatch={
-                      !!row.birth_certificate_name &&
-                      admission !==
-                        row.birth_certificate_name.toLowerCase()
-                    }
-                  />
-                </td>
-
-                <td>
-                  <button
-                    className="btn small"
-                    onClick={() =>
-                      router.push(`/students/${row.sr}`)
-                    }
-                  >
-                    View
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
+              <td>
+                <button
+                  className="btn small"
+                  onClick={() =>
+                    router.push(`/students/${r.sr}`)
+                  }
+                >
+                  View
+                </button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
