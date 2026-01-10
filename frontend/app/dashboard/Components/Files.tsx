@@ -108,7 +108,7 @@ const deleteFile = async (id: number) => {
               )}
             </td>
             <td>
-              {<button
+              {f.extraction_error &&<button
                 className="btn"
                 onClick={()=>{deleteFile(f.file_id)}}
               >
