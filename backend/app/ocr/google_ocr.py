@@ -1,4 +1,5 @@
 from google.cloud import documentai_v1 as documentai
+from google.oauth2 import service_account
 import mimetypes
 from dotenv import load_dotenv
 import os
@@ -10,10 +11,17 @@ LOCATION = os.getenv("LOCATION")
 PROCESSOR_ID = os.getenv("PROCESSOR_ID")
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")  # fallback
 
-print(PROJECT_ID,LOCATION,PROCESSOR_ID,UPLOADS_DIR)
+SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+credentials = service_account.Credentials.from_service_account_file(
+    SERVICE_ACCOUNT_FILE
+)
+
 
 processor_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/processors/{PROCESSOR_ID}"
-client = documentai.DocumentProcessorServiceClient()
+# print(PROJECT_ID,LOCATION,PROCESSOR_ID,UPLOADS_DIR, processor_name)
+client = documentai.DocumentProcessorServiceClient(
+    credentials=credentials
+)
 
 
 def process_file(file_path: str) -> str:

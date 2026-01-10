@@ -101,6 +101,25 @@ def parse_ddmmyyyy(value):
     if not value:
         return None
     return datetime.strptime(value, "%d/%m/%Y")
+def clean_name(value):
+    if not value:
+        return None
+
+    value = value.strip()
+
+    if not value:
+        return None
+
+    # Uppercase for consistency
+    value = value.upper()
+
+    # Remove dots, commas, hyphens
+    value = re.sub(r"[.,\-]", " ", value)
+
+    # Collapse multiple spaces
+    value = re.sub(r"\s+", " ", value)
+
+    return value.strip()
 
 def create_placeholder_file(cur, sr):
     cur.execute("""
@@ -182,11 +201,11 @@ def main():
             """, {
                 "sr": sr,
                 "class": clean_class(row.get("Class")),
-                "student_name": row.get("Student Name"),
+                "student_name": clean_name(row.get("Student Name")),
                 "gender": row.get("Gender"),
                 "date_of_birth": parse_ddmmyyyy(row.get("Date Of Birth")),
-                "father_name": row.get("Father Name"),
-                "mother_name": row.get("Mother Name"),
+                "father_name": clean_name(row.get("Father Name")),
+                "mother_name": clean_name(row.get("Mother Name")),
                 "address": row.get("Address"),
                 "phone1": row.get("Contact Number"),
                 "student_aadhaar_number": clean_aadhaar(row.get("Adharcard Number")),
