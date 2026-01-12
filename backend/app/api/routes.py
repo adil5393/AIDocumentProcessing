@@ -884,7 +884,7 @@ def run_pending_bc_lookups(
 
     return {"processed_count": len(rows)}
 
-@router.post("/aadhaar/{doc_id}/{sr}/confirm")
+@router.post("/aadhaar/{doc_id}/{sr:path}/confirm")
 def confirm_aadhaar_match(
     doc_id: int,
     payload: dict,
