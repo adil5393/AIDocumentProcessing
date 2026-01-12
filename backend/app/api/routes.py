@@ -887,6 +887,7 @@ def run_pending_bc_lookups(
 @router.post("/aadhaar/{doc_id}/{sr:path}/confirm")
 def confirm_aadhaar_match(
     doc_id: int,
+    sr: str,
     payload: dict,
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
