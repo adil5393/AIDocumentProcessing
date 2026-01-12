@@ -16,6 +16,7 @@ __pycache__/
 .env.*
 amtechReqRes/
 cloudkeys/
+uidai.py
 # System files
 .DS_Store
 Thumbs.db

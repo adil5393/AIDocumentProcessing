@@ -128,7 +128,6 @@ def insert_admission_form(db,file_id, data):
                     """),
                     {"sr": sr}
                 ).fetchone()
-                print(placeholder)
                 if not placeholder:
                     raise HTTPException(
                         status_code=409,

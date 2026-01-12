@@ -131,6 +131,42 @@ const StatusCell = ({ status }: { status: Status }) => {
     </div>
   );
 };
+function DetailsCell({
+  status,
+  doc,
+}: {
+  status: Status;
+  doc: PersonInfo;
+}) {
+  const iconMap: Record<Status, string> = {
+    ok: "🟢",
+    mismatch: "🔴",
+    pending: "⏳",
+    missing: "⚪",
+  };
+
+  return (
+    <div style={{ fontSize: 12, lineHeight: 1.4 }}>
+      <div style={{ fontSize: 18, textAlign: "center" }}>
+        {iconMap[status]}
+      </div>
+
+      {doc.student_name && (
+        <div><strong>S:</strong> {doc.student_name}</div>
+      )}
+      {doc.father_name && (
+        <div><strong>F:</strong> {doc.father_name}</div>
+      )}
+      {doc.mother_name && (
+        <div><strong>M:</strong> {doc.mother_name}</div>
+      )}
+      {doc.dob && (
+        <div><strong>DOB:</strong> {doc.dob}</div>
+      )}
+    </div>
+  );
+}
+
 
 
 export default function CrossReview({ search }: { search: string }) {
@@ -185,35 +221,36 @@ export default function CrossReview({ search }: { search: string }) {
               <td><strong>{r.admission.student_name}</strong></td>
 
               <td>
-                <StatusCell
+                <DetailsCell
                   status={computeStatus(
                     r.admission,
                     r.aadhaar.student
                   )}
+                  doc={r.aadhaar.student}
                 />
               </td>
 
               <td>
-                <StatusCell
+                <DetailsCell
                   status={computeStatus(r.admission, r.tc)}
+                  doc={r.tc}
                 />
               </td>
 
               <td>
-                <StatusCell
-                  status={computeStatus(
-                    r.admission,
-                    r.marksheet
-                  )}
+                <DetailsCell
+                  status={computeStatus(r.admission, r.marksheet)}
+                  doc={r.marksheet}
                 />
               </td>
 
               <td>
-                <StatusCell
+                <DetailsCell
                   status={computeStatus(
                     r.admission,
                     r.birth_certificate
                   )}
+                  doc={r.birth_certificate}
                 />
               </td>
 

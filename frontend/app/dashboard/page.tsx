@@ -68,9 +68,9 @@ export default function Dashboard() {
 useEffect(() => {
   console.log("layoverFile", layoverFile);
 }, [layoverFile]);
-useEffect(() => {
-  setSearch("");
-}, [tab]);
+// useEffect(() => {
+//   setSearch("");
+// }, [tab]);
 
   const handleUpload = async () => {
   if (selectedFiles.length === 0) {
