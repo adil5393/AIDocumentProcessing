@@ -237,6 +237,7 @@ useEffect(() => {
           <Files
             openLayover={(file) => setLayoverFile(file)}
             search = {search}
+            active={tab === "files"}
           />
         )}
       <br />
