@@ -5,6 +5,8 @@ import BirthCertificateCandidates from "./BirthCertificateCandidates";
 import BirthCertificateMatches from "./BirthCertificateMatches";
 import { apiFetch } from "../../lib/api";
 import { matchesSearch } from "../Utils/Search";
+import LockButton from "../LockButton/LockButton";
+import { useRowLock } from "../LockButton/useRowLock";
 
 interface BirthCertificateRow {
   doc_id: number;
@@ -25,6 +27,10 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const {
+          isRowEditable,
+          setRow
+        } = useRowLock<number>();
 
   const fetchBirthCertificates = async () => {
     const res = await apiFetch(`${API_BASE}/api/birth-certificates`);
@@ -69,11 +75,13 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
               <th>DOB</th>
               <th>Lookup Status</th>
               <th>Actions</th>
+              <th>Unlock To Edit</th>
             </tr>
           </thead>
 
           <tbody>
-            {filteredRows.map((r) => (
+            {filteredRows.map((r) => {const editable = isRowEditable(r.doc_id); 
+            return(
               <React.Fragment key={r.doc_id}>
                 <tr>
                   <td>
@@ -83,6 +91,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                       field="student_name"
                       endpoint="birth-certificates"
                       onSaved={fetchBirthCertificates}
+                      editable={editable}
                     />
                   </td>
 
@@ -93,6 +102,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                       field="father_name"
                       endpoint="birth-certificates"
                       onSaved={fetchBirthCertificates}
+                      editable={editable}
                     />
                   </td>
 
@@ -103,6 +113,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                       field="mother_name"
                       endpoint="birth-certificates"
                       onSaved={fetchBirthCertificates}
+                      editable={editable}
                     />
                   </td>
 
@@ -110,9 +121,10 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                     <EditableCell
                       value={r.dob}
                       id={r.doc_id}
-                      field="dob"
+                      field="date_of_birth"
                       endpoint="birth-certificates"
                       onSaved={fetchBirthCertificates}
+                      editable={editable}
                     />
                   </td>
 
@@ -157,6 +169,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                       🔄 Re-run
                     </button>
                   </td>
+                  <td><LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)}/> </td>
                 </tr>
 
                 {openPreviewDocId === r.file_id && (
@@ -190,7 +203,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
                   </tr>
 )}
               </React.Fragment>
-            ))}
+            )})}
           </tbody>
         </table>
 

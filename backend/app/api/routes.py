@@ -1420,6 +1420,96 @@ def patch_aadhaar(doc_id : int,payload: Dict[str, Any], _: str = Depends(require
         "updated_fields": list(payload.keys())
     }
     
+@router.patch("/marksheets/{doc_id}")
+def patch_marksheets(doc_id : int,payload: Dict[str, Any], _: str = Depends(require_token), db: Session = Depends(get_db)):
+    allowed_fields=[
+        "student_name",
+        "father_name",
+        "mother_name",
+        "date_of_birth",
+    ]
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+    updates = []
+    params = {"doc_id": doc_id}
+    for field, value in payload.items():
+        if field not in allowed_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be edited"
+            )
+
+        # Normalize OCR junk
+        if isinstance(value, str):
+            value = value.strip()
+
+        updates.append(f"{field} = :{field}")
+        params[field] = value
+
+    query = f"""
+        UPDATE marksheets
+        SET {", ".join(updates)}
+        WHERE doc_id = :doc_id
+    """
+
+    result = db.execute(text(query), params)
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="SR not found")
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "doc_id": doc_id,
+        "updated_fields": list(payload.keys())
+    }
+
+@router.patch("/birth-certificates/{doc_id}")
+def patch_birth_certificates(doc_id : int,payload: Dict[str, Any], _: str = Depends(require_token), db: Session = Depends(get_db)):
+    allowed_fields=[
+        "student_name",
+        "father_name",
+        "mother_name",
+        "date_of_birth",
+    ]
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+    updates = []
+    params = {"doc_id": doc_id}
+    for field, value in payload.items():
+        if field not in allowed_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be edited"
+            )
+
+        # Normalize OCR junk
+        if isinstance(value, str):
+            value = value.strip()
+
+        updates.append(f"{field} = :{field}")
+        params[field] = value
+
+    query = f"""
+        UPDATE birth_certificates
+        SET {", ".join(updates)}
+        WHERE doc_id = :doc_id
+    """
+
+    result = db.execute(text(query), params)
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="SR not found")
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "doc_id": doc_id,
+        "updated_fields": list(payload.keys())
+    }
+    
 @router.get("/export/student-documents.xlsx")
 def export_student_documents(
     _: str = Depends(require_token),

@@ -5,6 +5,8 @@ import MarksheetCandidates from "./MarksheetCandidates";
 import MarksheetsConfirmed from "./MarksheetsConfirmed";
 import { apiFetch } from "../../lib/api";
 import { matchesSearch } from "../Utils/Search";
+import LockButton from "../LockButton/LockButton";
+import { useRowLock } from "../LockButton/useRowLock";
 
 interface MarksheetRow {
   doc_id: number;
@@ -25,7 +27,10 @@ export default function Marksheets({ API_BASE, search }: Props) {
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
-
+  const {
+        isRowEditable,
+        setRow
+      } = useRowLock<number>();
   const fetchMarksheets = async () => {
     const res = await apiFetch(`${API_BASE}/api/marksheets`);
     const data = await res.json();
@@ -71,11 +76,14 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
               <th>DOB</th>
               <th>Lookup Status</th>
               <th>Actions</th>
+              <th>Unlock To Edit</th>
             </tr>
           </thead>
 
           <tbody>
-            {filteredRows.map((r) => (
+            {filteredRows.map((r) => {
+            const editable = isRowEditable(r.doc_id)
+            return(
               <React.Fragment key={r.doc_id}>
                 <tr>
                   <td>
@@ -85,6 +93,7 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                       field="student_name"
                       endpoint="marksheets"
                       onSaved={fetchMarksheets}
+                      editable = {editable}
                     />
                   </td>
 
@@ -95,6 +104,7 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                       field="father_name"
                       endpoint="marksheets"
                       onSaved={fetchMarksheets}
+                       editable = {editable}
                     />
                   </td>
 
@@ -105,6 +115,7 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                       field="mother_name"
                       endpoint="marksheets"
                       onSaved={fetchMarksheets}
+                       editable = {editable}
                     />
                   </td>
 
@@ -112,9 +123,10 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                     <EditableCell
                       value={r.dob}
                       id={r.doc_id}
-                      field="dob"
+                      field="date_of_birth"
                       endpoint="marksheets"
                       onSaved={fetchMarksheets}
+                       editable = {editable}
                     />
                   </td>
 
@@ -159,6 +171,9 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                       🔄 Re-run
                     </button>
                   </td>
+                  <td>
+                    <LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)}/>
+                  </td>
                 </tr>
 
                 {openPreviewDocId === r.file_id && (
@@ -187,10 +202,11 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
                         setRefreshKey={setRefreshKey}
                       />
                     </td>
+                    
                   </tr>
                 )}
               </React.Fragment>
-            ))}
+            )})}
           </tbody>
         </table>
       </div>

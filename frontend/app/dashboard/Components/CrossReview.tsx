@@ -196,7 +196,19 @@ export default function CrossReview({ search }: { search: string }) {
       r.sr
     )
   );
+function computeParentStatus(
+  admissionValue: string | null,
+  doc: PersonInfo
+): Status {
+  if (!doc.student_name) return "missing";
+  if (!doc.confirmed) return "pending";
 
+  if (normalize(admissionValue) !== normalize(doc.student_name)) {
+    return "mismatch";
+  }
+
+  return "ok";
+}
   return (
     <div style={{ padding: 12 }}>
       {error && <p style={{ color: "red" }}>{error}</p>}
@@ -221,14 +233,36 @@ export default function CrossReview({ search }: { search: string }) {
               <td><strong>{r.admission.student_name}</strong></td>
 
               <td>
-                <DetailsCell
-                  status={computeStatus(
-                    r.admission,
-                    r.aadhaar.student
-                  )}
-                  doc={r.aadhaar.student}
-                />
-              </td>
+                  {/* Student Aadhaar */}
+                  <DetailsCell
+                    status={computeStatus(
+                      r.admission,
+                      r.aadhaar.student
+                    )}
+                    doc={r.aadhaar.student}
+                  />
+
+                  <hr />
+
+                  {/* Father Aadhaar */}
+                  <DetailsCell
+                    status={computeParentStatus(
+                      r.admission.father_name,
+                      r.aadhaar.father
+                    )}
+                    doc={r.aadhaar.father}
+                  />
+
+                  {/* Mother Aadhaar */}
+                  <DetailsCell
+                    status={computeParentStatus(
+                      r.admission.mother_name,
+                      r.aadhaar.mother
+                    )}
+                    doc={r.aadhaar.mother}
+                  />
+                </td>
+
 
               <td>
                 <DetailsCell
