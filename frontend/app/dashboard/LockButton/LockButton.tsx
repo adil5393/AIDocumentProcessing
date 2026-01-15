@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { Lock, Unlock } from "lucide-react";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function LockButton({
@@ -35,12 +36,10 @@ export default function LockButton({
         //   body: JSON.stringify({ password })
         }
       );
-
       if (!res.ok) {
         alert("Invalid password");
         return;
       }
-
       onChange(true);
     } finally {
       setLoading(false);
@@ -49,16 +48,20 @@ export default function LockButton({
 
   return (
     <button
-      className="icon-btn"
-      onClick={toggle}
-      disabled={loading}
-      title={unlocked ? "Lock row" : "Unlock row"}
-    >
-      {unlocked ? (
-        <Unlock size={16} className="lock-icon unlocked" />
-      ) : (
-        <Lock size={16} className="lock-icon locked" />
-      )}
-    </button>
+  type="button"
+  className={`lock-btn ${unlocked ? "unlocked" : "locked"}`}
+  onClick={toggle}
+  disabled={loading}
+  title={unlocked ? "Lock row" : "Unlock row"}
+>
+  {unlocked ? (
+    <Unlock size={14} className="lock-icon" />
+  ) : (
+    <Lock size={14} className="lock-icon" />
+  )}
+  <span className="lock-label">
+    {unlocked ? "Unlocked" : "Locked"}
+  </span>
+</button>
   );
 }

@@ -31,6 +31,11 @@ class UploadedFile(Base):
     display_name = Column(Text)
     extraction_error = Column(Text)
     layover_status = Column(Text)
+    unlock = Column(
+    Boolean,
+    nullable=False,
+    server_default=text("false")
+)
 
     __table_args__ = (
         CheckConstraint(

@@ -66,7 +66,8 @@ def list_files(
             extraction_done,
             extraction_error,
             extracted_raw,
-            display_name
+            display_name,
+            unlock
         FROM uploaded_files
         ORDER BY created_at DESC
     """)).fetchall()
@@ -79,7 +80,8 @@ def list_files(
             "extraction_done": r.extraction_done,
             "extraction_error":r.extraction_error,
             "extracted_raw":r.extracted_raw,
-            "display_name":r.display_name
+            "display_name":r.display_name,
+            "unlock":r.unlock
             
         }
         for r in rows
@@ -1510,6 +1512,77 @@ def patch_birth_certificates(doc_id : int,payload: Dict[str, Any], _: str = Depe
         "updated_fields": list(payload.keys())
     }
     
+from fastapi import HTTPException, Depends
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+
+@router.post("/files/{file_id}/lock")
+def lock_file(
+    file_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(text("""
+        UPDATE uploaded_files
+        SET unlock = false
+        WHERE file_id = :file_id
+    """), {"file_id": file_id})
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    db.commit()
+
+    return {
+        "success": True,
+        "file_id": file_id,
+        "unlock": False
+    }
+    
+@router.post("/files/lock-all")
+def lock_all_files(
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    db.execute(text("""
+        UPDATE uploaded_files
+        SET unlock = false
+    """))
+
+    db.commit()
+
+    return {
+        "success": True,
+        "message": "All files locked"
+    }
+
+@router.post("/files/{file_id}/unlock")
+def toggle_file_unlock(
+    file_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(text("""
+        UPDATE uploaded_files
+        SET unlock = NOT unlock
+        WHERE file_id = :file_id
+        RETURNING unlock
+    """), {"file_id": file_id}).fetchone()
+
+    if not result:
+        raise HTTPException(
+            status_code=404,
+            detail="Uploaded file not found"
+        )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "file_id": file_id,
+        "unlock": result.unlock
+    }
+
 @router.get("/export/student-documents.xlsx")
 def export_student_documents(
     _: str = Depends(require_token),

@@ -23,14 +23,60 @@
 .lock-icon {
   opacity: 0.7;
 }
+.lock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
-.lock-icon.unlocked {
-  color: #4ade80; /* subtle green */
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: #f9fafb;
+  cursor: pointer;
+
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    transform 0.05s ease;
 }
 
-.lock-icon.locked {
-  color: #94a3b8; /* muted slate */
+/* Press effect */
+.lock-btn:active {
+  transform: translateY(1px);
 }
+
+/* 🔒 Locked */
+.lock-btn.locked {
+  color: #374151;           /* gray-700 */
+  background: #f3f4f6;      /* gray-100 */
+  border-color: #e5e7eb;    /* gray-200 */
+}
+
+.lock-btn.locked:hover {
+  background: #e5e7eb;
+}
+
+/* 🔓 Unlocked (warning / action state) */
+.lock-btn.unlocked {
+  color: #7f1d1d;           /* red-900 */
+  background: #fee2e2;      /* red-100 */
+  border-color: #fecaca;    /* red-200 */
+}
+
+.lock-btn.unlocked:hover {
+  background: #fecaca;
+}
+
+/* Accessibility */
+.lock-btn:focus-visible {
+  outline: 2px solid #2563eb; /* blue-600 */
+  outline-offset: 2px;
+}
+
+
 
 /* Header */
 .confirmed-block h4 {

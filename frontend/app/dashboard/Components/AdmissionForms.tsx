@@ -345,7 +345,8 @@ export default function AdmissionForms({ search }: { search: string }) {
             <LockButton
               rowId={r.sr}
               unlocked={editable}
-              onChange={state => setRow(r.sr, state)}
+              onChange={(state) => {setRow(r.sr, state)
+}}
             />
           </td>
       </tr>
