@@ -8,13 +8,15 @@ export default function EditableCell({
   id,
   field,
   endpoint,
-  onSaved
+  onSaved,
+  editable=false,
 }: {
   value: string | null;
   id: string | number;
   field: string;
   endpoint: string; // e.g. "admission-forms" | "transfer-certificates"
   onSaved: () => void;
+  editable?: boolean;
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(value || "");
@@ -46,6 +48,9 @@ export default function EditableCell({
     } finally {
       setSaving(false);
     }
+  }
+  if (!editable) {
+    return <span>{value || "—"}</span>;
   }
 
   if (isEditing) {

@@ -8,6 +8,8 @@ import './sidebar.css'
 import { matchesSearch } from "../Utils/Search";
 import { usePaginatedApi } from "../Pagination/PaginatedApi";
 import Pagination from "../Pagination/Pagination";
+import LockButton from "../LockButton/LockButton";
+import { useRowLock } from "../LockButton/useRowLock";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 export default function AdmissionForms({ search }: { search: string }) {
@@ -33,6 +35,11 @@ export default function AdmissionForms({ search }: { search: string }) {
     50,
     [search] // 👈 dependency
   );
+  const {
+    isRowEditable,
+    setRow
+  } = useRowLock<string>();
+  
 
   /* ------------------ FETCHERS ------------------ */
   function fetchAdmissionForms() {
@@ -177,7 +184,7 @@ export default function AdmissionForms({ search }: { search: string }) {
         </div>
 
         {/* ================= RIGHT PANE ================= */}
-        <div style={{ width: "90%" }}>
+        <div style={{ width: "100%" }}>
 
           <table className="table">
             <thead>
@@ -199,11 +206,15 @@ export default function AdmissionForms({ search }: { search: string }) {
                 <th>Aadhaar</th>
                 <th>Last School</th>
                 <th>Action</th>
+                <th>Unlock To Edit</th>
               </tr>
             </thead>
 
             <tbody>
-  {rows.map(r => (
+  {rows.map(r => {
+    const editable = isRowEditable(r.sr);
+    return(
+    
     <React.Fragment key={r.sr}>
       <tr>
         <td><EditableCell
@@ -212,6 +223,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="sr"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           /></td>
 
         <td>
@@ -221,6 +233,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="class"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -231,6 +244,8 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="student_name"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
+
           />
         </td>
 
@@ -243,6 +258,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="date_of_birth"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -253,6 +269,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="father_name"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -265,6 +282,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="mother_name"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -280,6 +298,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="phone1"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -290,6 +309,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="phone2"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           />
         </td>
 
@@ -299,6 +319,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             field="student_aadhaar_number"
             endpoint="admission-forms"
             onSaved={refresh}
+            editable= {editable}
           /></td>
         <td>{r.last_school_attended}</td>
 
@@ -320,6 +341,13 @@ export default function AdmissionForms({ search }: { search: string }) {
             onSuccess={refresh}
           />
         </td>
+        <td>
+            <LockButton
+              rowId={r.sr}
+              unlocked={editable}
+              onChange={state => setRow(r.sr, state)}
+            />
+          </td>
       </tr>
 
       {openPreviewId === r.file_id && (
@@ -331,7 +359,7 @@ export default function AdmissionForms({ search }: { search: string }) {
             />
           )}
                   </React.Fragment>
-                ))}
+                )})}
             </tbody>
           </table>
           <Pagination

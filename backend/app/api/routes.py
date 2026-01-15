@@ -212,6 +212,11 @@ def upload_files(
 
     for file in files:
         ext = os.path.splitext(file.filename)[1].lower()
+        if ext != ".pdf" or file.content_type != "application/pdf":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Only PDF files are allowed: {file.filename}"
+            )
         filename = f"{uuid.uuid4()}{ext}"
         file_path = os.path.join(UPLOAD_DIR, filename)
 
@@ -1324,7 +1329,6 @@ def patch_tc(
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
 ):
-    print (payload)
     ALLOWED_FIELDS = {
     "student_name",
     "date_of_birth",
@@ -1372,6 +1376,50 @@ def patch_tc(
         "updated_fields": list(payload.keys())
     }
 
+@router.patch("/aadhaars/{doc_id}")
+def patch_aadhaar(doc_id : int,payload: Dict[str, Any], _: str = Depends(require_token), db: Session = Depends(get_db)):
+    allowed_fields=[
+        "name",
+        "aadhaar_number",
+        "date_of_birth",
+    ]
+    if not payload:
+        raise HTTPException(status_code=400, detail="Empty payload")
+    updates = []
+    params = {"doc_id": doc_id}
+    for field, value in payload.items():
+        if field not in allowed_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Field '{field}' cannot be edited"
+            )
+
+        # Normalize OCR junk
+        if isinstance(value, str):
+            value = value.strip()
+
+        updates.append(f"{field} = :{field}")
+        params[field] = value
+
+    query = f"""
+        UPDATE aadhaar_documents
+        SET {", ".join(updates)}
+        WHERE doc_id = :doc_id
+    """
+
+    result = db.execute(text(query), params)
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="SR not found")
+
+    db.commit()
+
+    return {
+        "status": "ok",
+        "doc_id": doc_id,
+        "updated_fields": list(payload.keys())
+    }
+    
 @router.get("/export/student-documents.xlsx")
 def export_student_documents(
     _: str = Depends(require_token),
@@ -2206,4 +2254,15 @@ def post_admission_to_amtech(
         "mode": "posted",
         "response": response
     }
+    
+@router.post("/unlock/{pwd}/edit")
+def unlock_edit(pwd:str,_: str = Depends(require_token)):
+    from dotenv import load_dotenv
+    load_dotenv()
+    passwords = os.getenv("EDIT_PWD")
+    allowed = [p.strip() for p in passwords.split(",")]
+    if pwd not in allowed:
+        raise HTTPException(status_code=403, detail="Invalid password")
+    return {"ok": True}
+        
     

@@ -7,6 +7,10 @@ import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
 import DocumentPreviewRow from "./DocumentPreviewRow";
 import { matchesSearch } from "../Utils/Search";
+import EditableCell from "./EditableCell";
+import LockButton from "../LockButton/LockButton";
+import { useRowLock } from "../LockButton/useRowLock";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type AadhaarRow = {
@@ -30,6 +34,10 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
   const [rows, setRows] = useState<AadhaarRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
+  const {
+      isRowEditable,
+      setRow
+    } = useRowLock<number>();
 
   function fetchAadhaarDocuments() {
     apiFetch(`${API_BASE}/api/aadhaar-documents`)
@@ -89,17 +97,47 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
               <th>Lookup Status</th>
               <th>Checked At</th>
               <th>Action</th>
+              <th>Unlock To Edit</th>
               
             </tr>
           </thead>
 
          <tbody>
-          {filteredRows.map(r => (
+          {filteredRows.map(r => {
+          const editable = isRowEditable(r.doc_id);
+          return (
           <React.Fragment key={r.doc_id}>
             <tr>
-              <td>{r.name}</td>
-              <td>{r.date_of_birth || "-"}</td>
-              <td>{r.aadhaar_number || "-"}</td>
+              <td>
+                  <EditableCell 
+                    value={r.name}
+                    id={r.doc_id}
+                    field="name"
+                    endpoint="aadhaars"
+                    onSaved={()=>setRefreshKey(k => k+1)}
+                    editable={editable}
+                  />
+              </td>
+              <td>
+                  <EditableCell 
+                    value={r.date_of_birth || "-"}
+                    id={r.doc_id}
+                    field="date_of_birth"
+                    endpoint="aadhaars"
+                    onSaved={()=>setRefreshKey(k => k+1)}
+                    editable={editable}
+                  />
+              </td>
+              <td>
+                  <EditableCell 
+                    value={r.aadhaar_number || "-"}
+                    id={r.doc_id}
+                    field="aadhaar_number"
+                    endpoint="aadhaars"
+                    onSaved={()=>setRefreshKey(k => k+1)}
+                    editable={editable}
+                  />
+              </td>
               <td>{r.relation_type || "-"}</td>
               <td>{r.related_name || "-"}</td>
 
@@ -152,6 +190,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                   </button>
                 )}
               </td>
+              <td><LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)} /></td>             
             </tr> 
             {openPreviewDocId === r.doc_id && (
               <DocumentPreviewRow
@@ -177,7 +216,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
               </tr>
             )}
           </React.Fragment>
-        ))}
+        )})}
       </tbody>
 
         </table>

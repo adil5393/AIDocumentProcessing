@@ -92,7 +92,8 @@ useEffect(() => {
     });
 
     if (!res.ok) {
-      setStatus("Upload failed");
+      const err = await res.json();   // 👈 THIS was missing
+      setStatus(err.detail || "Upload failed");
       return;
     }
 
@@ -168,6 +169,7 @@ useEffect(() => {
   
 
 {/* TABS */}
+
   <div className="tabs-row">
     <div className="tabs">
       <button className={`tab ${tab === "files" ? "active" : ""}`} onClick={() => setTab("files")}>Files</button>

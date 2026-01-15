@@ -74,9 +74,7 @@ def run():
                     structured = extract_fields(doc_type, extracted_raw)
                 else:
                     structured = extract_fields(doc_type, ocr_text)
-                    
-                print(doc_type)
-                print(structured)
+
                 if "error" in structured:
                     raise Exception(structured["error"])
 
@@ -101,7 +99,6 @@ def run():
                     update_display_name(db, file_id, aadhaar_display_name(structured))
                     if structured.get("aadhaar_number"):
                         run_aadhaar_lookup(db, doc_id)
-
                 elif doc_type == "transfer_certificate":
                     doc_id = insert_transfer_certificate(db, file_id, structured)
                     update_display_name(db, file_id, tc_display_name(structured))
@@ -145,6 +142,17 @@ def run():
                     "err": str(e),
                     "file_id": file_id
                 })
+                db.execute(text("""
+                        UPDATE uploaded_files
+                        SET
+                            ocr_text = :ocr_text,
+                            ocr_done = true,
+                            ocr_at = now()
+                        WHERE file_id = :file_id
+                    """), {
+                        "ocr_text": ocr_text,
+                        "file_id": file_id
+                    })
                 db.commit()
                 print(f"Failed processing file {file_id}:", e)
 

@@ -8,7 +8,8 @@ import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
 import TransferCertificatesConfirmed from "./TransferCertificatesConfirmed";
 import { matchesSearch } from "../Utils/Search";
-
+import { useRowLock } from "../LockButton/useRowLock";
+import LockButton from "../LockButton/LockButton";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type TCRow = {
@@ -31,6 +32,10 @@ export default function TransferCerts({search}: Props) {
   const [expandedDocId, setExpandedDocId] = useState<number | null>(null);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const {
+      isRowEditable,
+      setRow
+    } = useRowLock<number>();
   async function runPendingLookups() {
     const res = await apiFetch(
       `${API_BASE}/api/tc/lookup/pending`,
@@ -94,10 +99,11 @@ useEffect(() => {
               <th>Last Class</th>
               <th>Last School</th>
               <th>Actions</th>
+              <th>Unlock To Edit</th>
             </tr>
           </thead>
           <tbody>
-            {filteredrows.map((r) => (
+            {filteredrows.map((r) =>{const editable = isRowEditable(r.doc_id);return (
               <React.Fragment key={r.doc_id}>
                 <tr key={`${r.doc_id}-row`}>
                   <td>
@@ -107,6 +113,7 @@ useEffect(() => {
                       field="student_name"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
+                      editable={editable}
                     />
                 </td>
                   <td><EditableCell
@@ -115,6 +122,7 @@ useEffect(() => {
                       field="father_name"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
+                      editable={editable}
                     />
                   </td>
                   <td><EditableCell
@@ -123,13 +131,16 @@ useEffect(() => {
                       field="mother_name"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
-                    /></td>
+                      editable={editable}
+                    />
+                  </td>
                   <td><EditableCell
                       value={r.date_of_birth}
                       id={r.doc_id}
                       field="date_of_birth"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
+                      editable={editable}
                     /></td>
                   <td>{r.lookup_status || "-"}</td>
                   <td><EditableCell
@@ -138,6 +149,7 @@ useEffect(() => {
                       field="last_class_studied"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
+                      editable={editable}
                     /></td>
                   <td><EditableCell
                       value={r.last_school_name}
@@ -145,6 +157,7 @@ useEffect(() => {
                       field="last_school_name"
                       endpoint="transfer-certificates"
                       onSaved={fetchTransferCerts}
+                      editable={editable}
                     /></td>
                   <td>
                   <button
@@ -178,7 +191,13 @@ useEffect(() => {
                     🔄 Re-run
                   </button>
                 </td>
-
+                <td>
+                <LockButton
+                    rowId={r.doc_id}
+                    unlocked={editable}
+                    onChange={state => setRow(r.doc_id, state)}
+                  />
+                </td>
                 </tr>
                 {openPreviewDocId === r.file_id && (
                 <DocumentPreviewRow
@@ -211,7 +230,7 @@ useEffect(() => {
                 )}
 
               </React.Fragment>
-            ))}
+            )})}
           </tbody>
         </table>
         
