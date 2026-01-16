@@ -335,11 +335,11 @@ export default function AdmissionForms({ search }: { search: string }) {
           >
             {openPreviewId === r.file_id ? "Hide" : "Preview"}
           </button>
-          <PostStudentActionButton
+          {editable && <PostStudentActionButton
             sr={r.sr}
             endpoint={`/api/amtech/${r.sr}/post`}  // 👈 your POST route
             onSuccess={refresh}
-          />
+          />}
         </td>
         <td>
             <LockButton

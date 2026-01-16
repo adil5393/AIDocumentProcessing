@@ -1588,106 +1588,277 @@ def export_student_documents(
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
 ):
+    sql = text("""
+        SELECT
+            a.sr,
+
+            /* =======================
+            ADMISSION (SOURCE)
+            ======================== */
+            a.student_name              AS admission_student_name,
+            a.date_of_birth             AS admission_dob,
+            a.father_name               AS admission_father_name,
+            a.mother_name               AS admission_mother_name,
+
+            /* =======================
+            AADHAAR
+            ======================== */
+            ad_student.name             AS aadhaar_student_name,
+            ad_student.date_of_birth    AS aadhaar_dob,
+
+            ad_father.name              AS aadhaar_father_name,
+            ad_mother.name              AS aadhaar_mother_name,
+
+            am_student.is_confirmed     AS aadhaar_student_confirmed,
+            am_father.is_confirmed      AS aadhaar_father_confirmed,
+            am_mother.is_confirmed      AS aadhaar_mother_confirmed,
+
+            /* =======================
+            TRANSFER CERTIFICATE
+            ======================== */
+            tc.student_name             AS tc_student_name,
+            tc.date_of_birth            AS tc_dob,
+            tc.father_name              AS tc_father_name,
+            tc.mother_name              AS tc_mother_name,
+            tm.is_confirmed             AS tc_confirmed,
+
+            /* =======================
+            MARKSHEET
+            ======================== */
+            ms.student_name             AS marksheet_student_name,
+            ms.date_of_birth            AS marksheet_dob,
+            ms.father_name              AS marksheet_father_name,
+            ms.mother_name              AS marksheet_mother_name,
+            mm.is_confirmed             AS marksheet_confirmed,
+
+            /* =======================
+            BIRTH CERTIFICATE
+            ======================== */
+            bc.student_name             AS bc_student_name,
+            bc.date_of_birth            AS bc_dob,
+            bc.father_name              AS bc_father_name,
+            bc.mother_name              AS bc_mother_name,
+            bcm.is_confirmed            AS bc_confirmed
+
+        FROM admission_forms a
+
+        /* =======================
+        AADHAAR (3 ROLES)
+        ======================== */
+
+        /* Student */
+        LEFT JOIN aadhaar_matches am_student
+        ON am_student.sr_number = a.sr
+        AND am_student.match_role = 'student'
+
+        LEFT JOIN aadhaar_documents ad_student
+        ON ad_student.doc_id = am_student.aadhaar_doc_id
+
+        /* Father */
+        LEFT JOIN aadhaar_matches am_father
+        ON am_father.sr_number = a.sr
+        AND am_father.match_role = 'father'
+
+        LEFT JOIN aadhaar_documents ad_father
+        ON ad_father.doc_id = am_father.aadhaar_doc_id
+
+        /* Mother */
+        LEFT JOIN aadhaar_matches am_mother
+        ON am_mother.sr_number = a.sr
+        AND am_mother.match_role = 'mother'
+
+        LEFT JOIN aadhaar_documents ad_mother
+        ON ad_mother.doc_id = am_mother.aadhaar_doc_id
+
+
+        /* =======================
+        TRANSFER CERTIFICATE
+        ======================== */
+        LEFT JOIN tc_matches tm
+        ON tm.sr_number = a.sr
+
+        LEFT JOIN transfer_certificates tc
+        ON tc.doc_id = tm.tc_doc_id
+
+
+        /* =======================
+        MARKSHEET
+        ======================== */
+        LEFT JOIN marksheet_matches mm
+        ON mm.sr_number = a.sr
+
+        LEFT JOIN marksheets ms
+        ON ms.doc_id = mm.marksheet_doc_id
+
+
+        /* =======================
+        BIRTH CERTIFICATE
+        ======================== */
+        LEFT JOIN birth_certificate_matches bcm
+        ON bcm.sr_number = a.sr
+
+        LEFT JOIN birth_certificates bc
+        ON bc.doc_id = bcm.bc_doc_id
+
+
+        ORDER BY a.created_at DESC;
+    """)
     wb = Workbook()
     ws = wb.active
     ws.title = "Student Document Comparison"
 
     # ---- Header ----
-    headers = [
-        "SR",
-        "Source",
-        "Student Name",
-        "Father Name",
-        "Mother Name",
-        "Date of Birth",
-        "Aadhaar Number",
-    ]
+    headers = ([
+    "sr",
+
+    # Admission
+    "adm_student_name",
+    "adm_father_name",
+    "adm_mother_name",
+    "adm_dob",
+
+    # Aadhaar
+    "aad_student_name",
+    "aad_father_name",
+    "aad_mother_name",
+    "aad_dob",
+
+    "cmp_aad_student_name",
+    "cmp_aad_father_name",
+    "cmp_aad_mother_name",
+    "cmp_aad_dob",
+
+    # TC
+    "tc_student_name",
+    "tc_father_name",
+    "tc_mother_name",
+    "tc_dob",
+
+    "cmp_tc_student_name",
+    "cmp_tc_father_name",
+    "cmp_tc_mother_name",
+    "cmp_tc_dob",
+
+    # Marksheet
+    "marksheet_student_name",
+    "marksheet_father_name",
+    "marksheet_mother_name",
+    "marksheet_dob",
+
+    "cmp_marksheet_student_name",
+    "cmp_marksheet_father_name",
+    "cmp_marksheet_mother_name",
+    "cmp_marksheet_dob",
+
+    # Birth Certificate
+    "bc_student_name",
+    "bc_father_name",
+    "bc_mother_name",
+    "bc_dob",
+
+    "cmp_bc_student_name",
+    "cmp_bc_father_name",
+    "cmp_bc_mother_name",
+    "cmp_bc_dob",
+])
     ws.append(headers)
-
+    CMP_AAD_START = 10
+    CMP_TC_START = 18
+    CMP_MS_START = 26
+    CMP_BC_START = 34
     # ---- Fetch base SRs ----
-    admission_rows = db.execute(text("""
-        SELECT
-            sr,
-            student_name,
-            father_name,
-            mother_name,
-            date_of_birth,
-            student_aadhaar_number
-        FROM admission_forms
-        ORDER BY sr
-    """)).fetchall()
+    rows = db.execute(sql).fetchall()
+    from app.helper.excel_matching import compare
+    from app.helper.fill_cell_color import apply_cmp_color
+    for r in rows:
+        row_values = [
+            r.sr,
 
-    for adm in admission_rows:
-        sr = adm.sr
+            # Admission
+            r.admission_student_name,
+            r.admission_father_name,
+            r.admission_mother_name,
+            r.admission_dob,
 
-        # =========================
-        # 1️⃣ Admission Form row
-        # =========================
-        ws.append([
-            sr,
-            "Admission Form",
-            adm.student_name,
-            adm.father_name,
-            adm.mother_name,
-            adm.date_of_birth,
-            adm.student_aadhaar_number,
-        ])
+            # Aadhaar values
+            r.aadhaar_student_name,
+            r.aadhaar_father_name,
+            r.aadhaar_mother_name,
+            r.aadhaar_dob,
 
-        # =========================
-        # 2️⃣ Aadhaar row (always present)
-        # =========================
-        aadhaar = db.execute(text("""
-            SELECT
-                d.name,
-                d.date_of_birth,
-                d.aadhaar_number
-            FROM aadhaar_matches m
-            JOIN aadhaar_documents d
-              ON d.doc_id = m.aadhaar_doc_id
-            WHERE m.sr_number = :sr
-              AND m.match_role = 'student'
-              AND m.is_confirmed = true
-            LIMIT 1
-        """), {"sr": sr}).fetchone()
+            # Aadhaar comparisons
+            compare(r.admission_student_name, r.aadhaar_student_name),
+            compare(r.admission_father_name,  r.aadhaar_father_name),
+            compare(r.admission_mother_name,  r.aadhaar_mother_name),
+            compare(r.admission_dob,          r.aadhaar_dob),
 
-        ws.append([
-            sr,
-            "Aadhaar",
-            aadhaar.name if aadhaar else None,
-            None,
-            None,
-            aadhaar.date_of_birth if aadhaar else None,
-            aadhaar.aadhaar_number if aadhaar else None,
-        ])
+            # TC values
+            r.tc_student_name,
+            r.tc_father_name,
+            r.tc_mother_name,
+            r.tc_dob,
 
-        # =========================
-        # 3️⃣ Transfer Certificate row (always present)
-        # =========================
-        tc = db.execute(text("""
-            SELECT
-                t.student_name,
-                t.father_name,
-                t.mother_name,
-                t.date_of_birth
-            FROM tc_matches m
-            JOIN transfer_certificates t
-              ON t.doc_id = m.tc_doc_id
-            WHERE m.sr_number = :sr
-              AND m.is_confirmed = true
-            LIMIT 1
-        """), {"sr": sr}).fetchone()
+            # TC comparisons
+            compare(r.admission_student_name, r.tc_student_name),
+            compare(r.admission_father_name,  r.tc_father_name),
+            compare(r.admission_mother_name,  r.tc_mother_name),
+            compare(r.admission_dob,          r.tc_dob),
 
-        ws.append([
-            sr,
-            "Transfer Certificate",
-            tc.student_name if tc else None,
-            tc.father_name if tc else None,
-            tc.mother_name if tc else None,
-            tc.date_of_birth if tc else None,
-            None,
-        ])
+            # Marksheet values
+            r.marksheet_student_name,
+            r.marksheet_father_name,
+            r.marksheet_mother_name,
+            r.marksheet_dob,
 
-    # ---- Stream Excel file ----
+            # Marksheet comparisons
+            compare(r.admission_student_name, r.marksheet_student_name),
+            compare(r.admission_father_name,  r.marksheet_father_name),
+            compare(r.admission_mother_name,  r.marksheet_mother_name),
+            compare(r.admission_dob,          r.marksheet_dob),
+
+            # Birth Certificate values
+            r.bc_student_name,
+            r.bc_father_name,
+            r.bc_mother_name,
+            r.bc_dob,
+
+            # Birth Certificate comparisons
+            compare(r.admission_student_name, r.bc_student_name),
+            compare(r.admission_father_name,  r.bc_father_name),
+            compare(r.admission_mother_name,  r.bc_mother_name),
+            compare(r.admission_dob,          r.bc_dob),
+        ]
+
+        ws.append(row_values)
+        row_idx = ws.max_row  # current row
+
+        # ---- Color Aadhaar comparisons ----
+        for i in range(4):
+            apply_cmp_color(
+                ws.cell(row=row_idx, column=CMP_AAD_START + i),
+                row_values[CMP_AAD_START - 1 + i]
+            )
+
+        # ---- Color TC comparisons ----
+        for i in range(4):
+            apply_cmp_color(
+                ws.cell(row=row_idx, column=CMP_TC_START + i),
+                row_values[CMP_TC_START - 1 + i]
+            )
+
+        # ---- Color Marksheet comparisons ----
+        for i in range(4):
+            apply_cmp_color(
+                ws.cell(row=row_idx, column=CMP_MS_START + i),
+                row_values[CMP_MS_START - 1 + i]
+            )
+
+        # ---- Color Birth Certificate comparisons ----
+        for i in range(4):
+            apply_cmp_color(
+                ws.cell(row=row_idx, column=CMP_BC_START + i),
+                row_values[CMP_BC_START - 1 + i]
+            )
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -1696,7 +1867,8 @@ def export_student_documents(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={
-            "Content-Disposition": "attachment; filename=student_document_comparison.xlsx"
+            "Content-Disposition":
+            "attachment; filename=student_document_comparison.xlsx"
         },
     )
 
