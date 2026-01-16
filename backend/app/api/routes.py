@@ -374,7 +374,7 @@ def list_admission_forms(
             OR student_name ILIKE '%' || :search || '%'
             OR father_name ILIKE '%' || :search || '%'
         )
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, file_id DESC
         LIMIT :limit OFFSET :offset
     """),
         {"limit": page_size, "offset": offset,"search":search}
@@ -414,7 +414,7 @@ def list_aadhaar_documents(
             lookup_checked_at,
             created_at
         FROM aadhaar_documents
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, file_id DESC
     """)).fetchall()
 
     return [
@@ -451,7 +451,7 @@ def list_transfer_certificates(
             last_school_name,
             created_at
         FROM transfer_certificates
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, file_id DESC
     """)).fetchall()
 
     return [
@@ -483,7 +483,7 @@ def list_marksheets(db: Session = Depends(get_db)):
             lookup_status,
             last_checked_at
         FROM marksheets 
-        ORDER BY last_checked_at DESC
+        ORDER BY last_checked_at DESC, file_id DESC
     """)).fetchall()
 
     return [
@@ -513,7 +513,7 @@ def list_marksheets(db: Session = Depends(get_db)):
             lookup_status,
             last_checked_at
         FROM birth_certificates 
-        ORDER BY last_checked_at DESC
+        ORDER BY last_checked_at DESC, file_id DESC
     """)).fetchall()
 
     return [
