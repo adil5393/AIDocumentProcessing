@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { apiFetch } from "../../lib/api";
 import "./dashboard.css";
 import FilesLockButton from "../LockButton/FileLockButton";
-
+import { useRef } from "react";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FilesProps = {
@@ -30,50 +30,54 @@ export default function Files({openLayover,search, active
   const [files, setFiles] = useState<FileRow[]>([]);
   const [polling, setPolling] = useState(false);
 
+  const fetchId = useRef(0);
+
   const loadFiles = async () => {
-    const res = await apiFetch(`${API_BASE}/api/files`);
-    const data: FileRow[] = await res.json();
-    setFiles(data);
-  };
+  const id = ++fetchId.current;
+
+  const res = await apiFetch(`${API_BASE}/api/files`);
+  const data = await res.json();
+
+  if (id !== fetchId.current) return;
+  setFiles(data);
+};
   useEffect(() => {
     loadFiles();
   }, []);
 
-  useEffect(() =>{
-  const lock = apiFetch(
-          `${API_BASE}/api/files/lock-all`,
-          { method: "POST" }
-        );
-    },[active])
   useEffect(() => {
-    if (!polling) return;
+  if (!active) return;
 
-    const interval = setInterval(async () => {
-      const res = await apiFetch(`${API_BASE}/api/files`);
-      const data: FileRow[] = await res.json();
-      setFiles(data);
+  apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
+}, [active]);
 
-      const allDone =
-        data.length > 0 &&
-        data.every(f => f.ocr_done && f.extraction_done);
-
-      if (allDone) {
-        setPolling(false);
-        clearInterval(interval);
-      }
-    }, 1500);
-
-    return () => clearInterval(interval);
-  }, [polling]);
   useEffect(() => {
+  if (!polling) return;
+
+  const interval = setInterval(async () => {
+    await loadFiles();
+
+    const allDone =
+      files.length > 0 &&
+      files.every(f => f.ocr_done && f.extraction_done);
+
+    if (allDone) {
+      setPolling(false);
+    }
+  }, 1500);
+
+  return () => clearInterval(interval);
+}, [polling]);
+ useEffect(() => {
   const hasPending = files.some(
     f => !f.ocr_done || !f.extraction_done
   );
 
-  if (hasPending) {
+  if (hasPending && !polling) {
     setPolling(true);
   }
-}, [files]);
+}, [files, polling]);
+
 const deleteFile = async (id: number) => {
   if (!confirm("Delete this file?")) return;
 

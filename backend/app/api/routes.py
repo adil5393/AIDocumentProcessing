@@ -69,7 +69,7 @@ def list_files(
             display_name,
             unlock
         FROM uploaded_files
-        ORDER BY created_at DESC
+        ORDER BY created_at DESC, file_id DESC
     """)).fetchall()
     return [
         {
