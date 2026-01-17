@@ -54,9 +54,16 @@ def me(_: str = Depends(require_token)):
 
 @router.get("/files")
 def list_files(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
+    tab: str = Query("all"), 
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
     rows = db.execute(text("""
         SELECT
             file_id,
@@ -69,23 +76,42 @@ def list_files(
             display_name,
             unlock
         FROM uploaded_files
+        WHERE (
+            :search IS NULL
+            OR display_name ILIKE '%' || :search || '%'
+        )
+        AND (
+                    :tab = 'all'
+                    OR (
+                        :tab = 'ocr_error'
+                        AND ocr_done = false
+                        AND extraction_error IS NOT NULL
+                    )
+                    OR (
+                        :tab = 'extraction_error'
+                        AND ocr_done = true
+                        AND extraction_error IS NOT NULL
+                    )
+                )
         ORDER BY created_at DESC, file_id DESC
-    """)).fetchall()
-    return [
-        {
-            "file_id": r.file_id,
-            "file_path": r.file_path,
-            "doc_type": r.doc_type,
-            "ocr_done": r.ocr_done,
-            "extraction_done": r.extraction_done,
-            "extraction_error":r.extraction_error,
-            "extracted_raw":r.extracted_raw,
-            "display_name":r.display_name,
-            "unlock":r.unlock
-            
-        }
-        for r in rows
-    ]
+        LIMIT :limit OFFSET :offset
+    """),
+        {"limit": page_size, "offset": offset,"search":search,"tab":tab}
+    ).mappings().all()
+    total = db.execute(
+        text("""SELECT COUNT(*)
+            FROM uploaded_files
+            WHERE (
+                :search IS NULL
+                OR display_name ILIKE '%' || :search || '%'
+            );"""),{"search":search}
+    ).scalar()
+    return {
+        "items": rows,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
 
 @router.get("/reserved")
 async def get_reserved_srs(
@@ -2363,127 +2389,114 @@ def preview_image(
 
 @router.get("/students/crossreview")
 def students_overview(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
 ):
-    sql = text("""
-        SELECT
-            a.sr,
+    offset = (page - 1) * page_size
+    rows = (
+    db.execute(
+        text("""
+            SELECT
+                a.sr,
 
-            /* =======================
-            ADMISSION (SOURCE)
-            ======================== */
-            a.student_name              AS admission_student_name,
-            a.date_of_birth             AS admission_dob,
-            a.father_name               AS admission_father_name,
-            a.mother_name               AS admission_mother_name,
+                a.student_name AS admission_student_name,
+                a.date_of_birth AS admission_dob,
+                a.father_name AS admission_father_name,
+                a.mother_name AS admission_mother_name,
 
-            /* =======================
-            AADHAAR
-            ======================== */
-            ad_student.name             AS aadhaar_student_name,
-            ad_student.date_of_birth    AS aadhaar_dob,
+                ad_student.name AS aadhaar_student_name,
+                ad_student.date_of_birth AS aadhaar_dob,
 
-            ad_father.name              AS aadhaar_father_name,
-            ad_mother.name              AS aadhaar_mother_name,
+                ad_father.name AS aadhaar_father_name,
+                ad_mother.name AS aadhaar_mother_name,
 
-            am_student.is_confirmed     AS aadhaar_student_confirmed,
-            am_father.is_confirmed      AS aadhaar_father_confirmed,
-            am_mother.is_confirmed      AS aadhaar_mother_confirmed,
+                am_student.is_confirmed AS aadhaar_student_confirmed,
+                am_father.is_confirmed AS aadhaar_father_confirmed,
+                am_mother.is_confirmed AS aadhaar_mother_confirmed,
 
-            /* =======================
-            TRANSFER CERTIFICATE
-            ======================== */
-            tc.student_name             AS tc_student_name,
-            tc.date_of_birth            AS tc_dob,
-            tc.father_name              AS tc_father_name,
-            tc.mother_name              AS tc_mother_name,
-            tm.is_confirmed             AS tc_confirmed,
+                tc.student_name AS tc_student_name,
+                tc.date_of_birth AS tc_dob,
+                tc.father_name AS tc_father_name,
+                tc.mother_name AS tc_mother_name,
+                tm.is_confirmed AS tc_confirmed,
 
-            /* =======================
-            MARKSHEET
-            ======================== */
-            ms.student_name             AS marksheet_student_name,
-            ms.date_of_birth            AS marksheet_dob,
-            ms.father_name              AS marksheet_father_name,
-            ms.mother_name              AS marksheet_mother_name,
-            mm.is_confirmed             AS marksheet_confirmed,
+                ms.student_name AS marksheet_student_name,
+                ms.date_of_birth AS marksheet_dob,
+                ms.father_name AS marksheet_father_name,
+                ms.mother_name AS marksheet_mother_name,
+                mm.is_confirmed AS marksheet_confirmed,
 
-            /* =======================
-            BIRTH CERTIFICATE
-            ======================== */
-            bc.student_name             AS bc_student_name,
-            bc.date_of_birth            AS bc_dob,
-            bc.father_name              AS bc_father_name,
-            bc.mother_name              AS bc_mother_name,
-            bcm.is_confirmed            AS bc_confirmed
+                bc.student_name AS bc_student_name,
+                bc.date_of_birth AS bc_dob,
+                bc.father_name AS bc_father_name,
+                bc.mother_name AS bc_mother_name,
+                bcm.is_confirmed AS bc_confirmed
 
-        FROM admission_forms a
+            FROM admission_forms a
 
-        /* =======================
-        AADHAAR (3 ROLES)
-        ======================== */
+            LEFT JOIN aadhaar_matches am_student
+                ON am_student.sr_number = a.sr
+                AND am_student.match_role = 'student'
+            LEFT JOIN aadhaar_documents ad_student
+                ON ad_student.doc_id = am_student.aadhaar_doc_id
 
-        /* Student */
-        LEFT JOIN aadhaar_matches am_student
-        ON am_student.sr_number = a.sr
-        AND am_student.match_role = 'student'
+            LEFT JOIN aadhaar_matches am_father
+                ON am_father.sr_number = a.sr
+                AND am_father.match_role = 'father'
+            LEFT JOIN aadhaar_documents ad_father
+                ON ad_father.doc_id = am_father.aadhaar_doc_id
 
-        LEFT JOIN aadhaar_documents ad_student
-        ON ad_student.doc_id = am_student.aadhaar_doc_id
+            LEFT JOIN aadhaar_matches am_mother
+                ON am_mother.sr_number = a.sr
+                AND am_mother.match_role = 'mother'
+            LEFT JOIN aadhaar_documents ad_mother
+                ON ad_mother.doc_id = am_mother.aadhaar_doc_id
 
-        /* Father */
-        LEFT JOIN aadhaar_matches am_father
-        ON am_father.sr_number = a.sr
-        AND am_father.match_role = 'father'
+            LEFT JOIN tc_matches tm ON tm.sr_number = a.sr
+            LEFT JOIN transfer_certificates tc ON tc.doc_id = tm.tc_doc_id
 
-        LEFT JOIN aadhaar_documents ad_father
-        ON ad_father.doc_id = am_father.aadhaar_doc_id
+            LEFT JOIN marksheet_matches mm ON mm.sr_number = a.sr
+            LEFT JOIN marksheets ms ON ms.doc_id = mm.marksheet_doc_id
 
-        /* Mother */
-        LEFT JOIN aadhaar_matches am_mother
-        ON am_mother.sr_number = a.sr
-        AND am_mother.match_role = 'mother'
+            LEFT JOIN birth_certificate_matches bcm ON bcm.sr_number = a.sr
+            LEFT JOIN birth_certificates bc ON bc.doc_id = bcm.bc_doc_id
 
-        LEFT JOIN aadhaar_documents ad_mother
-        ON ad_mother.doc_id = am_mother.aadhaar_doc_id
+            WHERE (
+                :search IS NULL
+                OR a.student_name ILIKE '%' || :search || '%'
+                OR a.sr::text ILIKE '%' || :search || '%'
+            )
 
+            ORDER BY a.created_at DESC, a.sr DESC
+            LIMIT :limit OFFSET :offset
+        """),
+        {
+            "search": search,
+            "limit": page_size,
+            "offset": offset,
+        }
+    )
+    .mappings()
+    .all()
+)
 
-        /* =======================
-        TRANSFER CERTIFICATE
-        ======================== */
-        LEFT JOIN tc_matches tm
-        ON tm.sr_number = a.sr
-
-        LEFT JOIN transfer_certificates tc
-        ON tc.doc_id = tm.tc_doc_id
-
-
-        /* =======================
-        MARKSHEET
-        ======================== */
-        LEFT JOIN marksheet_matches mm
-        ON mm.sr_number = a.sr
-
-        LEFT JOIN marksheets ms
-        ON ms.doc_id = mm.marksheet_doc_id
-
-
-        /* =======================
-        BIRTH CERTIFICATE
-        ======================== */
-        LEFT JOIN birth_certificate_matches bcm
-        ON bcm.sr_number = a.sr
-
-        LEFT JOIN birth_certificates bc
-        ON bc.doc_id = bcm.bc_doc_id
-
-
-        ORDER BY a.created_at DESC;
-    """)
-
-    rows = db.execute(sql).mappings().all()
-    return rows
+    total = db.execute(
+        text("""SELECT COUNT(*)
+            FROM admission_forms
+            WHERE (
+                :search IS NULL
+                OR student_name ILIKE '%' || :search || '%'
+            );"""),{"search":search}
+    ).scalar()
+    return {
+        "items": rows,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
 
 @router.get("/amtech/status")
 def amtech_status(_: str = Depends(require_token)):

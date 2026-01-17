@@ -13,6 +13,9 @@ import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
 import Marksheets from "./Components/Marksheets";
 import './Components/header.css'
 import BirthCertificates from "./Components/Birthcertificates";
+import TabGroup from "./Tabs/TabGroup";
+import { FileSubTab } from "./Tabs/TabGroup";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
@@ -27,6 +30,17 @@ type FileRow = {
 };
 type Tab = "files" | "admission" | "aadhaar" | "tc" | "cross_review" | "marksheets" | "birth_certificates";
 
+
+const fileTabs = [
+  { id: "all", label: "All Files" },
+  { id: "ocr_error", label: "OCR Errors" },
+  { id: "extraction_error", label: "Extraction Errors" },
+] satisfies { id: FileSubTab; label: string }[];
+
+const admissionTabs = [
+{id: "all",label:"All Admission Forms"},
+{id: ""}]
+
 export default function Dashboard() {
   const [running, setRunning] = useState(false);
   const [tab, setTab] = useState<Tab>("files");
@@ -35,6 +49,7 @@ export default function Dashboard() {
   const [layoverFile, setLayoverFile] = useState<FileRow | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [fileTab, setFileTab] = useState<FileSubTab>("all");
 
   function exportExcel() {
     apiFetch(`${API_BASE}/api/export/student-documents.xlsx`)
@@ -180,7 +195,7 @@ useEffect(() => {
       <button className={`tab ${tab === "birth_certificates" ? "active" : ""}`} onClick={() => setTab("birth_certificates")}>Birth Certificates</button>
       <button className={`tab ${tab === "cross_review" ? "active" : ""}`} onClick={() => setTab("cross_review")}>Cross Review</button>
     </div>
-
+    
     {/* SEARCH BAR */}
     <input
       className="tab-search"
@@ -196,25 +211,34 @@ useEffect(() => {
       onChange={(e) => setSearch(e.target.value)}
     />
   </div>
+{tab === "files" && (
+          <div className="sub-tabs-row">
+            <TabGroup
+              tabs={fileTabs}
+              active={fileTab}
+              onChange={setFileTab}
+            />
+          </div>
+        )}
 </div>
-      <div>
+        <div>
         {layoverFile &&  (
          <AdmissionLayoverModal
-  fileId={layoverFile.file_id} docType={layoverFile.doc_type}
-  initialData={
-    typeof layoverFile.extracted_raw === "string"
-      ? JSON.parse(layoverFile.extracted_raw)
-      : layoverFile.extracted_raw ?? {}
-  }
-  error={layoverFile.extraction_error}
-  onConfirm={(data) => {
-    console.log("CONFIRM ADMISSION", data);
-  }}
-  onReject={() => {
-    console.log("REJECT ADMISSION");
-  }}
-  onClose={() => setLayoverFile(null)}
-/>
+            fileId={layoverFile.file_id} docType={layoverFile.doc_type}
+            initialData={
+              typeof layoverFile.extracted_raw === "string"
+                ? JSON.parse(layoverFile.extracted_raw)
+                : layoverFile.extracted_raw ?? {}
+            }
+            error={layoverFile.extraction_error}
+            onConfirm={(data) => {
+              console.log("CONFIRM ADMISSION", data);
+            }}
+            onReject={() => {
+              console.log("REJECT ADMISSION");
+            }}
+            onClose={() => setLayoverFile(null)}
+          />
         )}
         {tab === "admission" && (
           <AdmissionForms search={search}/>
@@ -232,14 +256,16 @@ useEffect(() => {
         {tab === "cross_review" && <CrossReview search={search} />}
         {tab === "marksheets" && <Marksheets API_BASE={API_BASE} search = {search}/>}
         {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE} search = {search}/>}
-      </div>
         {tab === "files" && (
-          <Files
-            openLayover={(file) => setLayoverFile(file)}
-            search = {search}
-            active={tab === "files"}
-          />
-        )}
+                    <Files
+                      subTab={fileTab}
+                      openLayover={(file) => setLayoverFile(file)}
+                      search={search}
+                      active
+                    />
+                  )}
+      </div>     
+      
       <br />
        
     </div>

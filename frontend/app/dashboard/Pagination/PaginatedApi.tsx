@@ -30,7 +30,10 @@ export function usePaginatedApi<T>(
         page_size: String(pageSize),
         ...(search ? { search } : {})
       });
-      const res = await apiFetch(`${url}?${params.toString()}`);
+      const separator = url.includes("?") ? "&" : "?";
+
+      const res = await apiFetch(`${url}${separator}${params.toString()}`);
+      console.log(res)
       const data = await res.json();
 
       if (!cancelled) {
@@ -46,7 +49,7 @@ export function usePaginatedApi<T>(
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, search,reloadKey]);
+  }, [page, pageSize, search,reloadKey,url ]);
 
   return {
     items,

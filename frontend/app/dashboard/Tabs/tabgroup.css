@@ -1,0 +1,11 @@
+.sub-tabs-row {
+  margin-left: 44px;
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+}
+
+.sub-tabs-row .tab {
+  font-size: 12px;
+  padding: 6px 12px;
+}

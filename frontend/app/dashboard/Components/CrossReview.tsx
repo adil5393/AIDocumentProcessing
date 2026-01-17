@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 import { useRouter } from "next/navigation";
 import { matchesSearch } from "../Utils/Search";
+import { usePaginatedApi } from "../Pagination/PaginatedApi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 type Status = "ok" | "mismatch" | "pending" | "missing";
@@ -17,9 +18,7 @@ type PersonInfo = {
 
 type StudentRow = {
   sr: string;
-
   admission: PersonInfo;
-
   aadhaar: {
     student: PersonInfo;
     father: PersonInfo;
@@ -167,35 +166,25 @@ function DetailsCell({
   );
 }
 
-
-
 export default function CrossReview({ search }: { search: string }) {
-  const [rows, setRows] = useState<StudentRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const {
+          items,
+          page,
+          total,
+          pageSize,
+          setPage,
+          loading,
+          refresh
+        } = usePaginatedApi<any>(
+        `${API_BASE}/api/students/crossreview`,
+        search,
+        50,
+        [search] // 👈 dependency
+      );
+  const frows = items.map(mapRow);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const res = await apiFetch(
-          `${API_BASE}/api/students/crossreview`
-        );
-        if (!res.ok) throw new Error("Failed to load");
-        const raw = await res.json();
-        setRows(raw.map(mapRow));
-      } catch (e: any) {
-        setError(e.message);
-      }
-    })();
-  }, []);
-
-  const filtered = rows.filter(r =>
-    matchesSearch(
-      search,
-      r.admission.student_name,
-      r.sr
-    )
-  );
 function computeParentStatus(
   admissionValue: string | null,
   doc: PersonInfo
@@ -227,7 +216,7 @@ function computeParentStatus(
         </thead>
 
         <tbody>
-          {filtered.map(r => (
+          {frows.map(r => (
             <tr key={r.sr}>
               <td>{r.sr}</td>
               <td><strong>{r.admission.student_name}</strong></td>

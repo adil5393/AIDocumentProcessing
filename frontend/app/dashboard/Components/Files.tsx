@@ -5,12 +5,16 @@ import { apiFetch } from "../../lib/api";
 import "./dashboard.css";
 import FilesLockButton from "../LockButton/FileLockButton";
 import { useRef } from "react";
+import { usePaginatedApi } from "../Pagination/PaginatedApi";
+import { FileSubTab } from "../Tabs/TabGroup";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FilesProps = {
   openLayover: (file: FileRow) => void;
   search: string;
   active:boolean;
+  subTab:FileSubTab;
 };
 
 type FileRow = {
@@ -25,58 +29,90 @@ type FileRow = {
   unlock: boolean;
 };
 
-export default function Files({openLayover,search, active
+export default function Files({openLayover,search, active,subTab
 }: FilesProps) {
-  const [files, setFiles] = useState<FileRow[]>([]);
-  const [polling, setPolling] = useState(false);
+  // const [files, setFiles] = useState<FileRow[]>([]);
+  // const [polling, setPolling] = useState(false);
+  const {
+        items: rows,
+        page,
+        total,
+        pageSize,
+        setPage,
+        loading,
+        refresh
+      } = usePaginatedApi<any>(
+      `${API_BASE}/api/files?tab=${subTab}`,
+      search,
+      50,
+      [search] // 👈 dependency
+    );
+  // const fetchId = useRef(0);
 
-  const fetchId = useRef(0);
+//   const loadFiles = async () => {
+//   const id = ++fetchId.current;
 
-  const loadFiles = async () => {
-  const id = ++fetchId.current;
+//   const res = await apiFetch(`${API_BASE}/api/files`);
+//   const data = await res.json();
 
-  const res = await apiFetch(`${API_BASE}/api/files`);
-  const data = await res.json();
+//   if (id !== fetchId.current) return;
+//   setFiles(data);
+// };
+  // useEffect(() => {
+  //   loadFiles();
+  // }, []);
 
-  if (id !== fetchId.current) return;
-  setFiles(data);
-};
-  useEffect(() => {
-    loadFiles();
-  }, []);
+    const didLockAll = useRef(false);
 
-  useEffect(() => {
+useEffect(() => {
+  if (!active || didLockAll.current) return;
+
+  didLockAll.current = true;
+  apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
+  refresh();
+}, [active, refresh]);
+
+//   useEffect(() => {
+//   if (!polling) return;
+
+//   const interval = setInterval(async () => {
+//     await loadFiles();
+
+//     const allDone =
+//       files.length > 0 &&
+//       files.every(f => f.ocr_done && f.extraction_done);
+
+//     if (allDone) {
+//       setPolling(false);
+//     }
+//   }, 1500);
+
+//   return () => clearInterval(interval);
+// }, [polling]);
+//  useEffect(() => {
+//   const hasPending = rows.some(
+//     f => !f.ocr_done || !f.extraction_done
+//   );
+
+//   if (hasPending && !polling) {
+//     setPolling(true);
+//   }
+// }, [files, polling]);
+useEffect(() => {
   if (!active) return;
 
-  apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
-}, [active]);
-
-  useEffect(() => {
-  if (!polling) return;
-
-  const interval = setInterval(async () => {
-    await loadFiles();
-
-    const allDone =
-      files.length > 0 &&
-      files.every(f => f.ocr_done && f.extraction_done);
-
-    if (allDone) {
-      setPolling(false);
-    }
-  }, 1500);
-
-  return () => clearInterval(interval);
-}, [polling]);
- useEffect(() => {
-  const hasPending = files.some(
+  const hasPending = rows.some(
     f => !f.ocr_done || !f.extraction_done
   );
 
-  if (hasPending && !polling) {
-    setPolling(true);
-  }
-}, [files, polling]);
+  if (!hasPending) return;
+
+  const interval = setInterval(() => {
+    refresh();
+  }, 1500);
+
+  return () => clearInterval(interval);
+}, [rows, active, refresh]);
 
 const deleteFile = async (id: number) => {
   if (!confirm("Delete this file?")) return;
@@ -85,7 +121,7 @@ const deleteFile = async (id: number) => {
     method: "DELETE",
   });
 
-  loadFiles();
+  // loadFiles();
 };
   return (
     <table className="table">
@@ -101,7 +137,7 @@ const deleteFile = async (id: number) => {
       </thead>
       <tbody>
        
-        {files.map((f) => { 
+        {rows.map((f) => { 
           return (
           <tr key={f.file_id}>
             <td>{f.display_name}</td>
@@ -122,7 +158,7 @@ const deleteFile = async (id: number) => {
               )}
             </td>
             <td>
-              {(f.extraction_error || f.unlock) &&<button
+              {(f.unlock) &&<button
                 className="btn"
                 onClick={()=>{deleteFile(f.file_id)}}
               >
@@ -151,7 +187,7 @@ const deleteFile = async (id: number) => {
         { method: "POST" }
       );
 
-      loadFiles(); // ← refresh from backend
+      // loadFiles(); // ← refresh from backend
     }}
     onLock={async () => {
       await apiFetch(
@@ -159,7 +195,7 @@ const deleteFile = async (id: number) => {
         { method: "POST" }
       );
 
-      loadFiles(); // ← refresh from backend
+      // loadFiles(); // ← refresh from backend
     }}
   />
 </td>
