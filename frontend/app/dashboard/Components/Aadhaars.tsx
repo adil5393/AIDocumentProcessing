@@ -139,7 +139,16 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                   />
               </td>
               <td>{r.relation_type || "-"}</td>
-              <td>{r.related_name || "-"}</td>
+              
+              <td>
+              <EditableCell 
+                    value={r.related_name || "-"}
+                    id={r.doc_id}
+                    field="related_name"
+                    endpoint="aadhaars"
+                    onSaved={()=>setRefreshKey(k => k+1)}
+                    editable={editable}
+                  /></td>
 
               <td>
                 {r.lookup_status === "pending" && "⏳ Pending"}

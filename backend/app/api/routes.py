@@ -1410,6 +1410,7 @@ def patch_aadhaar(doc_id : int,payload: Dict[str, Any], _: str = Depends(require
         "name",
         "aadhaar_number",
         "date_of_birth",
+        "related_name",
     ]
     if not payload:
         raise HTTPException(status_code=400, detail="Empty payload")
@@ -1616,7 +1617,7 @@ def export_student_documents(
 ):
     sql = text("""
         SELECT
-            a.sr,
+            a.sr,a.class as class_name,
 
             /* =======================
             ADMISSION (SOURCE)
@@ -1736,6 +1737,7 @@ def export_student_documents(
     # ---- Header ----
     headers = ([
     "sr",
+    "class_name",
 
     # Admission
     "adm_student_name",
@@ -1788,10 +1790,10 @@ def export_student_documents(
     "cmp_bc_dob",
 ])
     ws.append(headers)
-    CMP_AAD_START = 10
-    CMP_TC_START = 18
-    CMP_MS_START = 26
-    CMP_BC_START = 34
+    CMP_AAD_START = 11
+    CMP_TC_START = 19
+    CMP_MS_START = 27
+    CMP_BC_START = 35
     # ---- Fetch base SRs ----
     rows = db.execute(sql).fetchall()
     from app.helper.excel_matching import compare
@@ -1799,7 +1801,7 @@ def export_student_documents(
     for r in rows:
         row_values = [
             r.sr,
-
+            r.class_name,
             # Admission
             r.admission_student_name,
             r.admission_father_name,
@@ -2511,6 +2513,7 @@ def amtech_status(_: str = Depends(require_token)):
         "expires_at": state["expiry"],
         "expires_in_seconds": int(state["expiry"] - time.time())
     }  
+
 @router.post("/amtech/reconnect")
 def reconnect(_: str = Depends(require_token)):
     from app.integrations.amtech_auth import authenticate

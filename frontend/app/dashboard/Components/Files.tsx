@@ -7,6 +7,7 @@ import FilesLockButton from "../LockButton/FileLockButton";
 import { useRef } from "react";
 import { usePaginatedApi } from "../Pagination/PaginatedApi";
 import { FileSubTab } from "../Tabs/TabGroup";
+import Pagination from "../Pagination/Pagination";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -63,14 +64,16 @@ export default function Files({openLayover,search, active,subTab
   // }, []);
 
     const didLockAll = useRef(false);
+    useEffect(() => {
+      didLockAll.current = false;
+    }, [subTab]);
+    useEffect(() => {
+      if (!active || didLockAll.current) return;
 
-useEffect(() => {
-  if (!active || didLockAll.current) return;
-
-  didLockAll.current = true;
-  apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
-  refresh();
-}, [active, refresh]);
+      didLockAll.current = true;
+      apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
+      refresh();
+    }, [active, refresh]);
 
 //   useEffect(() => {
 //   if (!polling) return;
@@ -120,10 +123,11 @@ const deleteFile = async (id: number) => {
   await apiFetch(`${API_BASE}/api/files/${id}`, {
     method: "DELETE",
   });
-
+   refresh();
   // loadFiles();
 };
   return (
+  <>
     <table className="table">
       <thead>
         <tr>
@@ -166,7 +170,7 @@ const deleteFile = async (id: number) => {
               </button>}
             </td>
             <td>
-  <FilesLockButton
+        <FilesLockButton
     unlocked={f.unlock}
     onUnlock={async () => {
       const password = prompt("Enter password");
@@ -176,7 +180,7 @@ const deleteFile = async (id: number) => {
         `${API_BASE}/api/unlock/${password}/edit`,
         { method: "POST" }
       );
-
+      refresh();
       if (!res.ok) {
         alert("Invalid password");
         return;
@@ -194,7 +198,7 @@ const deleteFile = async (id: number) => {
         `${API_BASE}/api/files/${f.file_id}/lock`,
         { method: "POST" }
       );
-
+      refresh();
       // loadFiles(); // ← refresh from backend
     }}
   />
@@ -202,7 +206,12 @@ const deleteFile = async (id: number) => {
 
           </tr>
         )})}
+      
+      
+      
       </tbody>
     </table>
+    <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage}/>
+    </>
   );
 }
