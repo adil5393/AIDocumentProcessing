@@ -42,5 +42,4 @@ def insert_aadhaar(db,file_id, data: dict) -> int:
     )
 
     doc_id = result.fetchone().doc_id
-    db.commit()
     return doc_id
