@@ -137,6 +137,7 @@ const deleteFile = async (id: number) => {
           <th>Extraction</th>
           <th>Action</th>
           <th>Unlock To Delete</th>
+          <th>View</th>
         </tr>
       </thead>
       <tbody>
@@ -162,47 +163,61 @@ const deleteFile = async (id: number) => {
               )}
             </td>
             <td>
-              {(f.extraction_error) &&<button
+              {(f.extraction_error || f.unlock) &&<button
                 className="btn"
                 onClick={()=>{deleteFile(f.file_id)}}
               >
                 Delete
               </button>}
+              
             </td>
             <td>
-        <FilesLockButton
-    unlocked={f.unlock}
-    onUnlock={async () => {
-      const password = prompt("Enter password");
-      if (!password) return;
+                <FilesLockButton
+            unlocked={f.unlock}
+            onUnlock={async () => {
+              const password = prompt("Enter password");
+              if (!password) return;
 
-      const res = await apiFetch(
-        `${API_BASE}/api/unlock/${password}/edit`,
-        { method: "POST" }
-      );
-      refresh();
-      if (!res.ok) {
-        alert("Invalid password");
-        return;
-      }
+              const res = await apiFetch(
+                `${API_BASE}/api/unlock/${password}/edit`,
+                { method: "POST" }
+              );
+              refresh();
+              if (!res.ok) {
+                alert("Invalid password");
+                return;
+              }
 
-      await apiFetch(
-        `${API_BASE}/api/files/${f.file_id}/unlock`,
-        { method: "POST" }
-      );
+              await apiFetch(
+                `${API_BASE}/api/files/${f.file_id}/unlock`,
+                { method: "POST" }
+              );
 
-      // loadFiles(); // ← refresh from backend
-    }}
-    onLock={async () => {
-      await apiFetch(
-        `${API_BASE}/api/files/${f.file_id}/lock`,
-        { method: "POST" }
-      );
-      refresh();
-      // loadFiles(); // ← refresh from backend
-    }}
-  />
-</td>
+              // loadFiles(); // ← refresh from backend
+            }}
+            onLock={async () => {
+              await apiFetch(
+                `${API_BASE}/api/files/${f.file_id}/lock`,
+                { method: "POST" }
+              );
+              refresh();
+              // loadFiles(); // ← refresh from backend
+            }}
+          />
+        </td>
+        <td>
+          <button
+            className="btn"
+            onClick={() =>
+              window.open(
+                `${API_BASE}/api/files/${f.file_id}/preview-image`,
+                "_blank"
+              )
+            }
+          >
+            View
+          </button>
+        </td>
 
           </tr>
         )})}

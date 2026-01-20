@@ -25,7 +25,8 @@ class TCMatch(Base):
             onupdate="CASCADE",
             ondelete="CASCADE"
         ),
-        nullable=False
+        nullable=False,
+        unique=True,
     )
 
     tc_doc_id = Column(

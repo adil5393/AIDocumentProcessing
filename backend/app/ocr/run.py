@@ -66,12 +66,15 @@ def run():
                 # ------------------
                 # 2️⃣ Extraction
                 # ------------------
-                doc_type = detect_document_type(ocr_text)
-                if doc_type == "unknown":
-                    doc_type = gpt_detect_document_type(ocr_text)
+                doc_type  = db.execute(text("""SELECT doc_type from uploaded_files where file_id=:file_id"""),{"file_id":file_id}).scalar()
+                
+                
+                if doc_type=="unknown":
+                    doc_type = detect_document_type(ocr_text)
+                    if doc_type == "unknown":
+                        doc_type = gpt_detect_document_type(ocr_text)
                     
-                if extracted_raw:
-                    # doc_type = extracted_raw["doc_type"]
+                if extracted_raw:                    
                     structured = extract_fields(doc_type, extracted_raw)
                 else:
                     structured = extract_fields(doc_type, ocr_text)

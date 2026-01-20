@@ -171,7 +171,7 @@ export default function AdmissionLayoverModal({
             onClick={async () => {
               await apiFetch(`${API_BASE}/api/files/${fileId}/reassess`, {
                 method: "POST",
-                body: JSON.stringify({ extracted_raw: form }),
+                body: JSON.stringify({ doc_type: selectedDocType,extracted_raw: form }),
               });
             onConfirm(form);
             onClose()

@@ -31,6 +31,7 @@ DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
 router = APIRouter(prefix="/api")
 
 class ReassessPayload(BaseModel):
+    doc_type: str
     extracted_raw: Dict[str, Any]
 
 class LoginRequest(BaseModel):
@@ -1924,15 +1925,21 @@ def reassess_file(
     _: str = Depends(require_token),
     db: Session = Depends(get_db),
 ):
+    # 🔥 force doc_type from frontend
+    raw = payload.extracted_raw
+    raw["doc_type"] = payload.doc_type
+    print(raw)
     db.execute(text("""
         UPDATE uploaded_files
         SET
             extracted_raw = :raw,
+            doc_type = :doc_type,
             extraction_error = NULL,
             extraction_done = false
         WHERE file_id = :file_id
     """), {
-        "raw": json.dumps(payload.extracted_raw),
+        "raw": json.dumps(raw),
+        "doc_type": payload.doc_type,
         "file_id": file_id
     })
 

@@ -25,7 +25,8 @@ class BirthCertificateMatch(Base):
             onupdate="CASCADE",
             ondelete="CASCADE"
         ),
-        nullable=False
+        nullable=False,
+        unique=True,
     )
 
     bc_doc_id = Column(

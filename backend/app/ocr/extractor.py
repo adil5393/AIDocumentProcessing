@@ -66,6 +66,7 @@ HARD RULES (MANDATORY)
 ====================
 
 1. Return ONLY valid JSON. No text outside JSON.
+2. If the Names and Words are in Hindi, Return them in Closest Suitable English Word.
 3. Aadhaar numbers:
    - Must be EXACTLY 12 digits
    - Must appear near keywords like "Aadhaar", "UID", "UIDAI"

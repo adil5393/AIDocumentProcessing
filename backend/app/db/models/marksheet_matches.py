@@ -25,7 +25,8 @@ class MarksheetMatch(Base):
             onupdate="CASCADE",
             ondelete="CASCADE"
         ),
-        nullable=False
+        nullable=False,
+        unique=True,
     )
 
     marksheet_doc_id = Column(
