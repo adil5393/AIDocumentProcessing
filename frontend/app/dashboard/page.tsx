@@ -15,7 +15,7 @@ import './Components/header.css'
 import BirthCertificates from "./Components/Birthcertificates";
 import TabGroup from "./Tabs/TabGroup";
 import { FileSubTab } from "./Tabs/TabGroup";
-
+import DateRangePicker from "./DateRange/DateRange";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
 type FileRow = {
@@ -29,7 +29,10 @@ type FileRow = {
   extraction_error: string | null;
 };
 type Tab = "files" | "admission" | "aadhaar" | "tc" | "cross_review" | "marksheets" | "birth_certificates";
-
+type DateRange = {
+  from: string | null;
+  to: string | null;
+  }
 
 const fileTabs = [
   { id: "all", label: "All Files" },
@@ -50,6 +53,10 @@ export default function Dashboard() {
   const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
   const [fileTab, setFileTab] = useState<FileSubTab>("all");
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: null,
+    to: null,
+  });
 
   function exportExcel() {
     apiFetch(`${API_BASE}/api/export/student-documents.xlsx`)
@@ -210,8 +217,9 @@ useEffect(() => {
       value={search}
       onChange={(e) => setSearch(e.target.value)}
     />
+    <DateRangePicker value={dateRange} onChange={setDateRange}/>
   </div>
-{tab === "files" && (
+  {tab === "files" && (
           <div className="sub-tabs-row">
             <TabGroup
               tabs={fileTabs}
@@ -258,6 +266,8 @@ useEffect(() => {
         {tab === "birth_certificates" && <BirthCertificates API_BASE={API_BASE} search = {search}/>}
         {tab === "files" && (
                     <Files
+                      fromDate={dateRange.from}
+                      toDate={dateRange.to}
                       subTab={fileTab}
                       openLayover={(file) => setLayoverFile(file)}
                       search={search}

@@ -1,18 +1,12 @@
 import { useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
-type PaginatedResponse<T> = {
-  items: T[];
-  page: number;
-  page_size: number;
-  total: number;
-};
-
 export function usePaginatedApi<T>(
   url: string,
   search: string,
   pageSize = 50,
-  deps: any[] = []
+  deps: any[] = [],
+  extraParams: Record<string, string | null> = {}
 ) {
   const [items, setItems] = useState<T[]>([]);
   const [page, setPage] = useState(1);
@@ -25,23 +19,25 @@ export function usePaginatedApi<T>(
 
     async function load() {
       setLoading(true);
+
       const params = new URLSearchParams({
         page: String(page),
         page_size: String(pageSize),
-        ...(search ? { search } : {})
+        ...(search ? { search } : {}),
+        ...Object.fromEntries(
+          Object.entries(extraParams).filter(([_, v]) => v !== null)
+        ),
       });
-      const separator = url.includes("?") ? "&" : "?";
 
+      const separator = url.includes("?") ? "&" : "?";
       const res = await apiFetch(`${url}${separator}${params.toString()}`);
-      console.log(res)
       const data = await res.json();
 
       if (!cancelled) {
         setItems(data.items);
         setTotal(data.total);
+        setLoading(false);
       }
-
-      setLoading(false);
     }
 
     load();
@@ -49,7 +45,7 @@ export function usePaginatedApi<T>(
     return () => {
       cancelled = true;
     };
-  }, [page, pageSize, search,reloadKey,url ]);
+  }, [page, pageSize, search, reloadKey, url, ...deps]);
 
   return {
     items,
@@ -58,7 +54,6 @@ export function usePaginatedApi<T>(
     total,
     loading,
     setPage,
-    refresh: () => setReloadKey(k => k + 1), // 👈 THIS
+    refresh: () => setReloadKey(k => k + 1),
   };
 }
-

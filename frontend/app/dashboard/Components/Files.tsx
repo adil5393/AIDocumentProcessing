@@ -16,6 +16,8 @@ type FilesProps = {
   search: string;
   active:boolean;
   subTab:FileSubTab;
+  fromDate: string | null;
+  toDate: string | null;
 };
 
 type FileRow = {
@@ -30,10 +32,9 @@ type FileRow = {
   unlock: boolean;
 };
 
-export default function Files({openLayover,search, active,subTab
+export default function Files({openLayover,search, active,subTab,fromDate,toDate
 }: FilesProps) {
-  // const [files, setFiles] = useState<FileRow[]>([]);
-  // const [polling, setPolling] = useState(false);
+  
   const {
         items: rows,
         page,
@@ -46,23 +47,12 @@ export default function Files({openLayover,search, active,subTab
       `${API_BASE}/api/files?tab=${subTab}`,
       search,
       50,
-      [search] // 👈 dependency
+      [search,fromDate,toDate],
+      {
+        from_date: fromDate,
+        to_date: toDate,
+      } // 👈 dependency
     );
-  // const fetchId = useRef(0);
-
-//   const loadFiles = async () => {
-//   const id = ++fetchId.current;
-
-//   const res = await apiFetch(`${API_BASE}/api/files`);
-//   const data = await res.json();
-
-//   if (id !== fetchId.current) return;
-//   setFiles(data);
-// };
-  // useEffect(() => {
-  //   loadFiles();
-  // }, []);
-
     const didLockAll = useRef(false);
     useEffect(() => {
       didLockAll.current = false;
@@ -74,33 +64,6 @@ export default function Files({openLayover,search, active,subTab
       apiFetch(`${API_BASE}/api/files/lock-all`, { method: "POST" });
       refresh();
     }, [active, refresh]);
-
-//   useEffect(() => {
-//   if (!polling) return;
-
-//   const interval = setInterval(async () => {
-//     await loadFiles();
-
-//     const allDone =
-//       files.length > 0 &&
-//       files.every(f => f.ocr_done && f.extraction_done);
-
-//     if (allDone) {
-//       setPolling(false);
-//     }
-//   }, 1500);
-
-//   return () => clearInterval(interval);
-// }, [polling]);
-//  useEffect(() => {
-//   const hasPending = rows.some(
-//     f => !f.ocr_done || !f.extraction_done
-//   );
-
-//   if (hasPending && !polling) {
-//     setPolling(true);
-//   }
-// }, [files, polling]);
 useEffect(() => {
   if (!active) return;
 
@@ -163,7 +126,9 @@ const deleteFile = async (id: number) => {
               )}
             </td>
             <td>
-              {(f.extraction_error || f.unlock) &&<button
+              {/* (f.extraction_error || f.unlock) && */}
+              {<button
+              
                 className="btn"
                 onClick={()=>{deleteFile(f.file_id)}}
               >

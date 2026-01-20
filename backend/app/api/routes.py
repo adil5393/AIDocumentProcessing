@@ -10,7 +10,7 @@ from sqlalchemy import text
 from app.db.session import get_db
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,date
 from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
 from typing import Dict, Any
 from fastapi.responses import StreamingResponse
@@ -58,10 +58,13 @@ def list_files(
     page: int = Query(1, ge=1),
     page_size: int = Query(50, ge=10, le=200),
     search: str | None = None,
-    tab: str = Query("all"), 
+    tab: str = Query("all"),
+    from_date: date | None = Query(None),
+    to_date: date | None = Query(None),
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    print(from_date,to_date)
     if search == "":
         search = None
     offset = (page - 1) * page_size
@@ -94,11 +97,26 @@ def list_files(
                         AND extraction_error IS NOT NULL
                     )
                 )
+        AND (
+            :from_date IS NULL
+            OR created_at >= :from_date
+        )
+        AND (
+            :to_date IS NULL
+            OR created_at <= :to_date
+        )
         ORDER BY created_at DESC, file_id DESC
         LIMIT :limit OFFSET :offset
     """),
-        {"limit": page_size, "offset": offset,"search":search,"tab":tab}
-    ).mappings().all()
+        {
+        "limit": page_size,
+        "offset": offset,
+        "search": search,
+        "tab": tab,
+        "from_date": from_date,
+        "to_date": to_date,
+        }).mappings().all()
+    
     total = db.execute(
         text("""SELECT COUNT(*)
             FROM uploaded_files
