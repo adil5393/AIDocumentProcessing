@@ -56,7 +56,7 @@ def run_aadhaar_lookup(db, doc_id: int):
     # -------------------------
     # EXACT AADHAAR (HARD SIGNAL)
     # -------------------------
-    if (aadhaar_age and aadhaar_no) and aadhaar_age <= 18:
+    if (aadhaar_age and aadhaar_no):
         rows = db.execute(
     text("""
         SELECT af.sr,
@@ -161,7 +161,6 @@ def run_aadhaar_lookup(db, doc_id: int):
         status = "no_match"
     elif len(candidates) == 1:
         status = "single_match"
-        
     else:
         status = "multiple_match"
     for c in candidates.values():
