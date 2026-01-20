@@ -71,7 +71,7 @@ def run():
                     doc_type = gpt_detect_document_type(ocr_text)
                     
                 if extracted_raw:
-                    doc_type = extracted_raw["doc_type"]
+                    # doc_type = extracted_raw["doc_type"]
                     structured = extract_fields(doc_type, extracted_raw)
                 else:
                     structured = extract_fields(doc_type, ocr_text)
