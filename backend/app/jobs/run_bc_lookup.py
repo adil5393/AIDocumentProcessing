@@ -75,7 +75,7 @@ def run_bc_lookup(db, doc_id: int):
             # + 0.1 * (1.0 if signals["class_match"] else 0.0)
         )
 
-        if total_score >= 0.45:  # guardrail
+        if total_score >= 0.2:  # guardrail
             candidates[r.sr] = {
                 "sr": r.sr,
                 "total_score": round(total_score, 3),

@@ -1,7 +1,7 @@
 import json
 import re
 from sqlalchemy import text
-from app.helper.matching import normalize_name,name_similarity,calculate_age
+from app.helper.matching import normalize_name,name_similarity,calculate_age,dob_similarity
 
 def build_candidate(sr, role, student_name, signals):
     score = 0.0
@@ -44,7 +44,7 @@ def run_aadhaar_lookup(db, doc_id: int):
     relation_type = (row.relation_type or "").upper()
     related_name = row.related_name or ""
     aadhaar_age = calculate_age(row.date_of_birth)
-
+    aadhaar_date_of_birth = row.date_of_birth
     # clear old
     db.execute(
         text("DELETE FROM aadhaar_lookup_candidates WHERE doc_id = :d"),
@@ -103,7 +103,8 @@ def run_aadhaar_lookup(db, doc_id: int):
             SELECT af.sr,
                 af.student_name,
                 af.father_name,
-                af.mother_name
+                af.mother_name,
+                af.date_of_birth
             FROM admission_forms af
             WHERE NOT EXISTS (
                 SELECT 1
@@ -121,7 +122,7 @@ def run_aadhaar_lookup(db, doc_id: int):
             student_tokens = normalize_name(r.student_name)
             father_tokens = normalize_name(r.father_name)
             mother_tokens = normalize_name(r.mother_name)
-
+            admission_date_of_birth = r.date_of_birth
             aadhaar_tokens = normalize_name(aadhaar_name)
             related_tokens = normalize_name(related_name)
 
@@ -132,6 +133,7 @@ def run_aadhaar_lookup(db, doc_id: int):
                     "age_match": aadhaar_age is not None and aadhaar_age < 18,
                     "student_name_score": name_similarity(aadhaar_tokens, student_tokens),
                     "related_name_score": name_similarity(related_tokens, father_tokens),
+                    "date_of_birth_score":dob_similarity(admission_date_of_birth,aadhaar_date_of_birth)
                 }
                 candidates[(sr, "student")] = build_candidate(sr, "student",student_name, signals)
 

@@ -142,7 +142,7 @@ Rules:
   Example: "राम कुमार" → "Ram Kumar"
 - If a name is already in English, preserve it verbatim
 - If a name contains a title such as "Mr", "Mrs", "Ms", "Miss", "Smt", "Shri",
-  KEEP the title exactly as it appears in the document
+  Remove the title.
 - Do NOT remove titles or honorifics
 - Do NOT invent titles if not present
 - Preserve original spacing and capitalization AFTER transliteration

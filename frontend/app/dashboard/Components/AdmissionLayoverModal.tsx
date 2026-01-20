@@ -56,6 +56,7 @@ export default function AdmissionLayoverModal({
     student_aadhaar_number: initialData.student_aadhaar_number || "",
     last_school_attended: initialData.last_school_attended || "",
   });
+  const [selectedDocType, setSelectedDocType] = useState<string>(docType);
 
   const set = (k: keyof AdmissionData, v: string) =>
     setForm(p => ({ ...p, [k]: v }));
@@ -89,6 +90,17 @@ export default function AdmissionLayoverModal({
         )}
 
         <div className="form-grid">
+          <label>Document Type</label>
+            <select
+              value={selectedDocType}
+              onChange={e => setSelectedDocType(e.target.value)}
+            >
+              <option value="admission_form">Admission Form</option>
+              <option value="aadhaar">Aadhaar</option>
+              <option value="transfer_certificate">Transfer Certificate</option>
+              <option value="birth_certificate">Birth Certificate</option>
+              <option value="marksheet">High School Marksheet</option>
+            </select>
           <label>SR</label>
           <input value={form.sr} onChange={e => set("sr", e.target.value)} />
 

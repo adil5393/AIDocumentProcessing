@@ -1,8 +1,55 @@
 import re
-from datetime import date
+from datetime import date,datetime
 
-STOPWORDS = {}
+STOPWORDS = { "mr", "mrs", "ms", "miss", "master",
+    "shri", "shree", "smt", "kumari",
+    "dr", "prof"}
 
+
+def parse_dob(dob):
+    if not dob:
+        return None
+
+    # ✅ already a date/datetime object
+    if isinstance(dob, (date, datetime)):
+        year = dob.year
+        month = dob.month
+        day = dob.day
+        return year, month, day
+
+    # ✅ must be string from here
+    if not isinstance(dob, str):
+        return None
+
+    dob_str = dob.strip()
+
+    formats = [
+        "%d/%m/%Y", "%d-%m-%Y",
+        "%Y-%m-%d",
+        "%d/%m/%y", "%d-%m-%y",
+        "%d %b %Y", "%d %B %Y",
+        "%b %d %Y", "%B %d %Y",
+    ]
+
+    for fmt in formats:
+        try:
+            dt = datetime.strptime(dob_str, fmt)
+            year = dt.year
+            if year < 100:
+                year += 1900 if year > 30 else 2000
+            return year, dt.month, dt.day
+        except ValueError:
+            continue
+
+    # 🔥 OCR-safe numeric fallback
+    nums = list(map(int, re.findall(r"\d+", dob_str)))
+    if len(nums) == 3:
+        d, m, y = nums
+        if y < 100:
+            y += 1900 if y > 30 else 2000
+        return y, m, d
+
+    return None
 def split_compound(token: str, other_tokens: list[str]) -> list[str]:
     """
     Split token if it contains other known tokens as substrings
@@ -88,3 +135,26 @@ def calculate_age(dob):
     return today.year - dob.year - (
         (today.month, today.day) < (dob.month, dob.day)
     )
+def dob_similarity(dob1, dob2) -> float:
+    p1 = parse_dob(dob1)
+    p2 = parse_dob(dob2)
+
+    if not p1 or not p2:
+        return 0.0
+
+    y1, m1, d1 = p1
+    y2, m2, d2 = p2
+
+    if (y1, m1, d1) == (y2, m2, d2):
+        return 1.0
+
+    if m1 == m2 and d1 == d2 and abs(y1 - y2) == 1:
+        return 0.9
+
+    if m1 == m2 and y1 == y2:
+        return 0.7
+
+    if y1 == y2:
+        return 0.4
+
+    return 0.0
