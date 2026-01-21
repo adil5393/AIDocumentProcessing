@@ -101,11 +101,12 @@ const deleteFile = async (id: number) => {
           <th>Action</th>
           <th>Unlock To Delete</th>
           <th>View</th>
+          <th>Index</th>
         </tr>
       </thead>
       <tbody>
        
-        {rows.map((f) => { 
+        {rows.map((f,index) => { 
           return (
           <tr key={f.file_id}>
             <td>{f.display_name}</td>
@@ -183,7 +184,7 @@ const deleteFile = async (id: number) => {
             View
           </button>
         </td>
-
+        <td className="btn index" style={{"width":"1%"}}>{index+1}</td>
           </tr>
         )})}
       

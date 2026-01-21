@@ -7,7 +7,12 @@
   padding: 20px;
   overflow: visible;   /* ✅ REQUIRED */
 }
-
+td.index {
+  position: sticky;
+  left: 0;
+  background: inherit;
+  z-index: 1;
+}
 /* ===== Tables ===== */
 /* CONFIRMED MATCHES BLOCK */
 .confirmed-block {

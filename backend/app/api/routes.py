@@ -1314,6 +1314,7 @@ def patch_admission_form(
         "phone1",
         "phone2",
         "father_aadhaar",
+        "mother_aadhaar",
         "class",
     }
 
