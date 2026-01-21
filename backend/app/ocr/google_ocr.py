@@ -1,20 +1,33 @@
 from google.cloud import documentai_v1 as documentai
 from google.oauth2 import service_account
+from google.auth import default
 import mimetypes
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-PROJECT_ID = os.getenv("PROJECT_ID")
-LOCATION = os.getenv("LOCATION")
-PROCESSOR_ID = os.getenv("PROCESSOR_ID")
+DEV_MODE = os.getenv("DEV_MODE") == "True"
+
+if DEV_MODE:
+    os.environ.pop("GOOGLE_APPLICATION_CREDENTIALS", None)
+    PROJECT_ID = os.getenv("DEV_PROJECT_ID")
+    LOCATION = os.getenv("DEV_LOCATION")
+    PROCESSOR_ID = os.getenv("DEV_PROCESSOR_ID")
+    credentials, project = default()
+else:
+    PROJECT_ID = os.getenv("PROJECT_ID")
+    LOCATION = os.getenv("LOCATION")
+    PROCESSOR_ID = os.getenv("PROCESSOR_ID")
+    SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE
+    )
+print(PROCESSOR_ID,PROJECT_ID)
+
 UPLOADS_DIR = os.getenv("UPLOADS_DIR", "uploads")  # fallback
 
-SERVICE_ACCOUNT_FILE = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE
-)
+
 
 
 processor_name = f"projects/{PROJECT_ID}/locations/{LOCATION}/processors/{PROCESSOR_ID}"

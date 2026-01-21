@@ -273,7 +273,15 @@ export default function AdmissionForms({ search }: { search: string }) {
           />
         </td>
 
-        <td>{r.father_aadhaar}</td>
+        {/* <td>{r.father_aadhaar}</td> */}
+        <td><EditableCell
+            value={r.father_aadhaar}
+            id={r.sr}
+            field="father_aadhaar"
+            endpoint="admission-forms"
+            onSaved={refresh}
+            editable= {editable}
+          /></td>
 
         <td>
           <EditableCell

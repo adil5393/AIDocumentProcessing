@@ -10,6 +10,7 @@ type AadhaarCandidate = {
   sr: string;
   role: string;
   student_name: string;
+  father_name:string;
   total_score: number;
   signals: Record<string, any>;
 };
@@ -40,6 +41,7 @@ export default function AadhaarLookupCandidates({ docId,refreshKey,setRefreshKey
           <th>SR</th>
           <th>Role</th>
           <th>Name</th>
+          <th>Father</th>
           <th>Score</th>
           <th>Signals</th>
           
@@ -51,6 +53,7 @@ export default function AadhaarLookupCandidates({ docId,refreshKey,setRefreshKey
             <td> {r.sr}</td>
             <td>{r.role}</td>
             <td>{r.student_name}</td>
+            <td>{r.father_name}</td>
             <td>{r.total_score.toFixed(2)}</td>
             <td colSpan={8} className="expanded-row">
               {Object.entries(r.signals).map(([k, v]) => (

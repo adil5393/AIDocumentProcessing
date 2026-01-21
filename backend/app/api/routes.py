@@ -610,31 +610,35 @@ def get_aadhaar_candidates(
 ):
     try:
         rows = db.execute(
-            text("""
-                SELECT
-                    sr,
-                    role,
-                    student_name,
-                    total_score,
-                    signals
-                FROM aadhaar_lookup_candidates
-                WHERE doc_id = :d
-                ORDER BY total_score DESC
-            """),
-            {"d": doc_id}
-        ).fetchall()
+    text("""
+        SELECT
+            c.sr,
+            c.role,
+            af.student_name,
+            af.father_name,
+            c.total_score,
+            c.signals
+        FROM aadhaar_lookup_candidates c
+        JOIN admission_forms af
+          ON af.sr = c.sr
+        WHERE c.doc_id = :d
+        ORDER BY c.total_score DESC
+    """),
+    {"d": doc_id}
+).fetchall()
 
         return [
-            {
-                "sr": r.sr,
-                "role": r.role,
-                "student_name":r.student_name,
-                "total_score": float(r.total_score),
-                "signals": r.signals if isinstance(r.signals, dict)
-                           else json.loads(r.signals)
-            }
-            for r in rows
-        ]
+    {
+        "sr": r.sr,
+        "role": r.role,
+        "student_name": r.student_name,
+        "father_name": r.father_name,
+        "total_score": float(r.total_score),
+        "signals": r.signals if isinstance(r.signals, dict)
+                   else json.loads(r.signals)
+    }
+    for r in rows
+]
 
     finally:
         db.close()
@@ -778,7 +782,7 @@ def run_pending_aadhaar_lookups(
         text("""
     SELECT doc_id
     FROM aadhaar_documents
-    where lookup_status not in ('single match','confirmed')
+    where lookup_status not in ('confirmed')
 """)
     ).fetchall()
     processed = 0
@@ -811,7 +815,6 @@ def rerun_tc_lookup(
         """),
         {"d": doc_id}
     ).scalar()
-    print(status)
     if status == "Confirmed":
         raise HTTPException(
             status_code=409,
