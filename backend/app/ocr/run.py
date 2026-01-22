@@ -31,6 +31,9 @@ def run():
         """)).fetchall()
 
         for file_id, file_path, extracted_raw, display_name in files:
+            structured = None
+            doc_type = "unknown"
+            ocr_text = None
             full_path = os.path.join(UPLOAD_DIR, file_path)
             if (display_name and 'PENDING_ADMISSION' in display_name):
                 continue
@@ -82,14 +85,7 @@ def run():
                 if "error" in structured:
                     raise Exception(structured["error"])
 
-                db.execute(text("""
-                    UPDATE uploaded_files
-                    SET extracted_raw = :raw
-                    WHERE file_id = :file_id
-                """), {
-                    "raw": json.dumps(structured),
-                    "file_id": file_id
-                })
+                
 
                 # ------------------
                 # 3️⃣ Domain insert
@@ -138,6 +134,22 @@ def run():
 
             except Exception as e:
                 db.rollback()
+                db.execute(text("""
+                    UPDATE uploaded_files
+                    SET doc_type = :doc_type
+                    WHERE file_id = :file_id
+                """), {
+                    "doc_type": doc_type,
+                    "file_id": file_id
+                })
+                db.execute(text("""
+                    UPDATE uploaded_files
+                    SET extracted_raw = :raw
+                    WHERE file_id = :file_id
+                """), {
+                    "raw": json.dumps(structured),
+                    "file_id": file_id
+                })
                 db.execute(text("""
                     UPDATE uploaded_files
                     SET extraction_error = :err

@@ -64,7 +64,7 @@ def list_files(
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
-    print(from_date,to_date)
+    
     if search == "":
         search = None
     offset = (page - 1) * page_size
@@ -2643,4 +2643,26 @@ def unlock_edit(pwd:str,_: str = Depends(require_token)):
         raise HTTPException(status_code=403, detail="Invalid password")
     return {"ok": True}
         
-    
+@router.post("/setocrextraction/{file_id}/pending")
+def setocrextractionpending(
+    file_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    result = db.execute(
+        text("""
+            UPDATE uploaded_files
+            SET
+                ocr_done = false,
+                extraction_done = false,
+                extraction_error = NULL
+            WHERE file_id = :file_id
+        """),
+        {"file_id": file_id},
+    )
+
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    db.commit()
+    return {"status": "ok", "file_id": file_id}

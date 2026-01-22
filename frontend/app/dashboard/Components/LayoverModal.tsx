@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+import { useEffect } from "react";
 type AdmissionData = {
   sr: string;
   class: string;
@@ -30,7 +31,7 @@ type Props = {
   onClose: () => void;
 };
 
-export default function AdmissionLayoverModal({
+export default function LayoverModal({
   fileId,
   docType,
   initialData,
@@ -56,10 +57,13 @@ export default function AdmissionLayoverModal({
     student_aadhaar_number: initialData.student_aadhaar_number || "",
     last_school_attended: initialData.last_school_attended || "",
   });
+  const [selectedDocType, setSelectedDocType] = useState<string>(docType);
 
   const set = (k: keyof AdmissionData, v: string) =>
     setForm(p => ({ ...p, [k]: v }));
-
+  useEffect(() => {
+    console.log("Layover initialData:", initialData);
+  }, [initialData]);
  return (
   <div className="layover-backdrop">
     <div className="layover-modal split">
@@ -87,8 +91,20 @@ export default function AdmissionLayoverModal({
             ⚠️ {error}
           </div>
         )}
-
+        
         <div className="form-grid">
+        
+          <label>Document Type</label>
+            <select
+              value={selectedDocType}
+              onChange={e => setSelectedDocType(e.target.value)}
+            >
+              <option value="admission_form">Admission Form</option>
+              <option value="aadhaar">Aadhaar</option>
+              <option value="transfer_certificate">Transfer Certificate</option>
+              <option value="birth_certificate">Birth Certificate</option>
+              <option value="marksheet">High School Marksheet</option>
+            </select>
           <label>SR</label>
           <input value={form.sr} onChange={e => set("sr", e.target.value)} />
 
@@ -159,7 +175,7 @@ export default function AdmissionLayoverModal({
             onClick={async () => {
               await apiFetch(`${API_BASE}/api/files/${fileId}/reassess`, {
                 method: "POST",
-                body: JSON.stringify({ extracted_raw: form }),
+                body: JSON.stringify({ doc_type: selectedDocType,extracted_raw: form }),
               });
             onConfirm(form);
             onClose()

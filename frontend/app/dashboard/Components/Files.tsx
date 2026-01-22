@@ -79,7 +79,21 @@ useEffect(() => {
 
   return () => clearInterval(interval);
 }, [rows, active, refresh]);
-
+const setOcrExPending = async (id: number) => {
+  const passwd = prompt("ENTER ADMIN PASSWD");
+  if (passwd != "Adil@05031993"){
+  return;
+}
+  try {
+    await apiFetch(`${API_BASE}/api/setocrextraction/${id}/pending`, {
+      method: "POST",
+    })
+    console.log("OCR extraction reset to pending:", id)
+  } catch (err) {
+    console.error("Failed to reset OCR extraction:", err)
+    throw err
+  }
+}
 const deleteFile = async (id: number) => {
   if (!confirm("Delete this file?")) return;
 
@@ -111,7 +125,7 @@ const deleteFile = async (id: number) => {
           <tr key={f.file_id}>
             <td>{f.display_name}</td>
             <td>{f.doc_type}</td>
-            <td>{f.ocr_done ? "✓" : "⏳"}</td>
+            <td><button className="btn" onClick={()=>setOcrExPending(f.file_id)}>{f.ocr_done ? "✓" : "⏳"}</button></td>
             <td>
               {f.extraction_error ? (
                 <button

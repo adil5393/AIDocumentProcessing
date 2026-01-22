@@ -9,7 +9,7 @@ import TransferCerts from "./Components/TransferCerts";
 import "./Components/dashboard.css";
 import Files from "./Components/Files";
 import CrossReview from "./Components/CrossReview";
-import AdmissionLayoverModal from "./Components/AdmissionLayoverModal";
+import LayoverModal from "./Components/LayoverModal";
 import Marksheets from "./Components/Marksheets";
 import './Components/header.css'
 import BirthCertificates from "./Components/Birthcertificates";
@@ -88,7 +88,7 @@ export default function Dashboard() {
     }
   }, []); 
 useEffect(() => {
-  console.log("layoverFile", layoverFile);
+  console.log("layoverFile.ex", layoverFile?.extracted_raw);
 }, [layoverFile]);
 // useEffect(() => {
 //   setSearch("");
@@ -231,7 +231,7 @@ useEffect(() => {
 </div>
         <div>
         {layoverFile &&  (
-         <AdmissionLayoverModal
+         <LayoverModal
             fileId={layoverFile.file_id} docType={layoverFile.doc_type}
             initialData={
               typeof layoverFile.extracted_raw === "string"
