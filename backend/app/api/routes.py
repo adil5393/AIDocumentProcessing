@@ -45,8 +45,8 @@ def require_token(authorization: str = Header(None)):
 
     if DEV_MODE:
         return
-
     if authorization != "Bearer fake-token-123":
+        print(authorization)
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 @router.get("/me")
@@ -2394,10 +2394,8 @@ def delete_bc_match(
 @router.get("/files/{file_id}/preview-image")
 def preview_image(
     file_id: int,
-    _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
-    print(file_id)
     row = db.execute(
         text("""
             SELECT file_path
