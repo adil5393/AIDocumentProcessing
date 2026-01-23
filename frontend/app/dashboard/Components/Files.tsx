@@ -125,9 +125,9 @@ const deleteFile = async (id: number) => {
           <tr key={f.file_id}>
             <td>{f.display_name}</td>
             <td>{f.doc_type}</td>
-            <td><button className="btn" onClick={()=>setOcrExPending(f.file_id)}>{f.ocr_done ? "✓" : "⏳"}</button></td>
+            <td>{ (f.ocr_done&& f.extraction_error)   ?  (<button className="btn" onClick={()=>setOcrExPending(f.file_id)}> Re-OCR </button>): "✓"}</td>
             <td>
-              {f.extraction_error ? (
+              {(f.extraction_error) ? (
                 <button
                   className="btn"
                   onClick={() => openLayover(f)}
@@ -141,8 +141,8 @@ const deleteFile = async (id: number) => {
               )}
             </td>
             <td>
-              {/* (f.extraction_error || f.unlock) && */}
-              {<button
+              {(f.extraction_error || f.unlock || !f.ocr_done) &&
+              <button
               
                 className="btn"
                 onClick={()=>{deleteFile(f.file_id)}}
