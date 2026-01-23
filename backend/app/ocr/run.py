@@ -11,7 +11,7 @@ from app.services.insert_marksheet import insert_marksheet
 from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
 from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
 from app.services.insert_birth_certificate import insert_birth_certificate
-from helper.ensure_ressasses_dict import ensure_dict
+from app.helper.ensure_ressasses_dict import ensure_dict
 import os
 import json
 from app.ocr.set_file_name import clean, tc_display_name,aadhaar_display_name,admission_display_name,highschool_marksheet_display_name,birth_certificate_display_name
