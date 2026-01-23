@@ -1,7 +1,7 @@
 from sqlalchemy import text
 from app.db.session import SessionLocal
 from app.ocr.google_ocr import process_file
-from app.ocr.extractor import extract_fields
+from app.ocr.extractor import extract_fields, normalize_from_raw
 from app.ocr.doc_classifier import detect_document_type
 from app.ocr.gpt_doc_classifier import gpt_detect_document_type
 from app.services.insert_admission_form import insert_admission_form
@@ -77,8 +77,8 @@ def run():
                     if doc_type == "unknown":
                         doc_type = gpt_detect_document_type(ocr_text)
                     
-                if extracted_raw:                    
-                    structured = extract_fields(doc_type, extracted_raw)
+                if extracted_raw:   
+                    structured=normalize_from_raw(doc_type,extracted_raw)
                 else:
                     structured = extract_fields(doc_type, ocr_text)
 

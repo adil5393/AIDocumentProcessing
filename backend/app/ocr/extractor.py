@@ -215,10 +215,62 @@ OCR Text:
 """
     return call_gpt(prompt)
 
-
-
-
+def extract_aadhaar_from_raw( extracted_dict: dict):
+    name = extracted_dict.get("name")
+    aadhaar_number = extracted_dict.get("aadhaar_number")
+    date_of_birth = extracted_dict.get("date_of_birth")
+    relation_type = extracted_dict.get("relation_type")
+    related_name = extracted_dict.get("related_name")
+    
+    return{"name":name,"aadhaar_number":aadhaar_number,"date_of_birth":date_of_birth,"relation_type":relation_type,"related_name":related_name}
+def extract_admission_form_from_raw(extracted_dict: dict) -> dict:
+    return {
+        "sr": extracted_dict.get("sr"),
+        "class": extracted_dict.get("class"),
+        "student_name": extracted_dict.get("student_name"),
+        "gender": extracted_dict.get("gender"),
+        "date_of_birth": extracted_dict.get("date_of_birth"),
+        "father_name": extracted_dict.get("father_name"),
+        "mother_name": extracted_dict.get("mother_name"),
+        "mother_occupation": extracted_dict.get("mother_occupation"),
+        "father_occupation": extracted_dict.get("father_occupation"),
+        "father_aadhaar": extracted_dict.get("father_aadhaar"),
+        "mother_aadhaar": extracted_dict.get("mother_aadhaar"),
+        "student_aadhaar_number": extracted_dict.get("student_aadhaar_number"),
+        "spen": extracted_dict.get("spen"),
+        "address": extracted_dict.get("address"),
+        "phone1": extracted_dict.get("phone1"),
+        "phone2": extracted_dict.get("phone2"),
+        "last_school_attended": extracted_dict.get("last_school_attended"),
+    }
+def extract_transfer_certificate_from_raw(extracted_dict: dict) -> dict:
+    return {
+        "student_name": extracted_dict.get("student_name"),
+        "father_name": extracted_dict.get("father_name"),
+        "mother_name": extracted_dict.get("mother_name"),
+        "date_of_birth": extracted_dict.get("date_of_birth"),
+        "last_class_studied": extracted_dict.get("last_class_studied"),
+        "last_school_name": extracted_dict.get("last_school_name"),
+    }
+    
+def extract_marksheet_from_raw(extracted_dict: dict) -> dict:
+    return {
+        "student_name": extracted_dict.get("student_name"),
+        "father_name": extracted_dict.get("father_name"),
+        "mother_name": extracted_dict.get("mother_name"),
+        "date_of_birth": extracted_dict.get("date_of_birth"),
+        "result_status": extracted_dict.get("result_status"),
+    }
+def extract_birth_certificate_from_raw(extracted_dict: dict) -> dict:
+    return {
+        "student_name": extracted_dict.get("student_name"),
+        "father_name": extracted_dict.get("father_name"),
+        "mother_name": extracted_dict.get("mother_name"),
+        "date_of_birth": extracted_dict.get("date_of_birth"),
+        "place_of_birth": extracted_dict.get("place_of_birth"),
+    }
 def extract_fields(doc_type: str, raw_text: str) -> dict:
+    
     if doc_type == "admission_form":
         return extract_admission_form(raw_text)
 
@@ -233,5 +285,23 @@ def extract_fields(doc_type: str, raw_text: str) -> dict:
 
     if doc_type == "birth_certificate":
         return extract_birth_certificate(raw_text)
+
+    return {"error": "unsupported_document_type"}
+
+def normalize_from_raw(doc_type: str, extracted_raw: dict) -> dict:
+    if doc_type == "aadhaar":
+        return extract_aadhaar_from_raw(extracted_raw)
+
+    if doc_type == "admission_form":
+        return extract_admission_form_from_raw(extracted_raw)
+
+    if doc_type == "transfer_certificate":
+        return extract_transfer_certificate_from_raw(extracted_raw)
+
+    if doc_type == "marksheet":
+        return extract_marksheet_from_raw(extracted_raw)
+
+    if doc_type == "birth_certificate":
+        return extract_birth_certificate_from_raw(extracted_raw)
 
     return {"error": "unsupported_document_type"}

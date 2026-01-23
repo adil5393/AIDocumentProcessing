@@ -139,7 +139,10 @@ export default function LayoverModal({
     phone1: initialData.phone1 || "",
     student_aadhaar_number: initialData.student_aadhaar_number || "",
     last_school_attended: initialData.last_school_attended || "",
-  
+    name:initialData.name || "",
+    aadhaar_number: initialData.aadhaar_number || "",
+    related_name:initialData.related_name || "",
+    relation_type:initialData.relation_type || ""
   });
   const [selectedDocType, setSelectedDocType] = useState<string>(docType);
   const [zoom,setZoom] = useState(1);
