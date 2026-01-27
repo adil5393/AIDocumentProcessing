@@ -23,6 +23,7 @@ type AadhaarRow = {
   related_name: string | null;
   lookup_status: "pending" | "single_match" | "multiple_match" | "no_match" | "error" | "confirmed";
   lookup_checked_at: string | null;
+  match_count: number;
 };
 type Props = {
   selectedDocId: number | null;
@@ -34,6 +35,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
   const [rows, setRows] = useState<AadhaarRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
+  
   const {
       isRowEditable,
       setRow
@@ -94,6 +96,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
               <th>Aadhaar</th>
               <th>Relation</th>
               <th>Related Name</th>
+              <th>Matches</th>
               <th>Lookup Status</th>
               <th>Checked At</th>
               <th>Action</th>
@@ -148,7 +151,11 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                     endpoint="aadhaars"
                     onSaved={()=>setRefreshKey(k => k+1)}
                     editable={editable}
-                  /></td>
+                  />
+              </td>
+                <td>
+                  {r.match_count}
+                </td>
 
               <td>
                 {r.lookup_status === "pending" && "⏳ Pending"}

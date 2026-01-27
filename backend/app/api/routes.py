@@ -448,35 +448,29 @@ def list_aadhaar_documents(
 ):
     rows = db.execute(text("""
         SELECT
-            doc_id,
-            file_id,
-            name,
-            date_of_birth,
-            aadhaar_number,
-            relation_type,
-            related_name,
-            lookup_status,
-            lookup_checked_at,
-            created_at
-        FROM aadhaar_documents
-        ORDER BY created_at DESC, file_id DESC
-    """)).fetchall()
+            d.doc_id,
+            d.file_id,
+            d.name,
+            d.date_of_birth,
+            d.aadhaar_number,
+            d.relation_type,
+            d.related_name,
+            d.lookup_status,
+            d.lookup_checked_at,
+            d.created_at,
 
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id": r.file_id,
-            "name": r.name,
-            "date_of_birth": r.date_of_birth,
-            "aadhaar_number": r.aadhaar_number,
-            "relation_type": r.relation_type,
-            "related_name": r.related_name,
-            "lookup_status": r.lookup_status,
-            "lookup_checked_at":r.lookup_checked_at,
-            "created_at": r.created_at,
-        }
-        for r in rows
-    ]
+            COUNT(m.match_id) AS match_count
+
+        FROM aadhaar_documents d
+        LEFT JOIN aadhaar_matches m
+               ON m.aadhaar_doc_id = d.doc_id
+
+        GROUP BY d.doc_id
+
+        ORDER BY d.created_at DESC, d.file_id DESC
+    """)).mappings().all()
+
+    return rows
 
 @router.get("/transfer-certificates")
 def list_transfer_certificates(
