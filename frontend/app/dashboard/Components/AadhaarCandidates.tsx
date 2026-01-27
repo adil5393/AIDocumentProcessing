@@ -55,7 +55,7 @@ export default function AadhaarLookupCandidates({ docId,refreshKey,setRefreshKey
             <td>{r.student_name}</td>
             <td>{r.father_name}</td>
             <td>{r.total_score.toFixed(2)}</td>
-            <td colSpan={8} className="expanded-row">
+            <td colSpan={9} className="expanded-row">
               {Object.entries(r.signals).map(([k, v]) => (
                 <SignalBadge key={k} label={k} value={v} />
               ))}

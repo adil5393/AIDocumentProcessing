@@ -218,7 +218,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
             )}
             {selectedDocId === r.doc_id && (
               <tr>
-                <td colSpan={8} className="expanded-row">
+                <td colSpan={10} className="expanded-row">
                   <div className="aadhaar-expanded">
 
                     {/* ✅ Confirmed matches FIRST */}
