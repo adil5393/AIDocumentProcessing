@@ -610,6 +610,7 @@ def get_aadhaar_candidates(
             c.role,
             af.student_name,
             af.father_name,
+            af.mother_name,
             c.total_score,
             c.signals
         FROM aadhaar_lookup_candidates c
@@ -627,6 +628,7 @@ def get_aadhaar_candidates(
         "role": r.role,
         "student_name": r.student_name,
         "father_name": r.father_name,
+        "mother_name":r.mother_name,
         "total_score": float(r.total_score),
         "signals": r.signals if isinstance(r.signals, dict)
                    else json.loads(r.signals)
