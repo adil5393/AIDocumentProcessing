@@ -69,6 +69,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
         <table className="table">
           <thead>
             <tr>
+              <th>File ID</th>
               <th>Student Name</th>
               <th>Father Name</th>
               <th>Mother Name</th>
@@ -84,6 +85,7 @@ export default function BirthCertificates({ API_BASE, search }: Props) {
             return(
               <React.Fragment key={r.doc_id}>
                 <tr>
+                  <td>{r.file_id}</td>
                   <td>
                     <EditableCell
                       value={r.student_name}

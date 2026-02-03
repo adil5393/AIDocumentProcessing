@@ -83,6 +83,7 @@ def list_files(
         WHERE (
             :search IS NULL
             OR display_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
         )
         AND (
                     :tab = 'all'

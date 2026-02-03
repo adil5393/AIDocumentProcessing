@@ -91,6 +91,7 @@ useEffect(() => {
         <table className="table">
           <thead>
             <tr>
+              <th>File Id</th>
               <th>Student Name</th>
               <th>Father Name</th>
               <th>Mother Name</th>
@@ -106,6 +107,7 @@ useEffect(() => {
             {filteredrows.map((r) =>{const editable = isRowEditable(r.doc_id);return (
               <React.Fragment key={r.doc_id}>
                 <tr key={`${r.doc_id}-row`}>
+                  <td>{r.file_id}</td>
                   <td>
                     <EditableCell
                       value={r.student_name}

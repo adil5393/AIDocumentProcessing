@@ -91,6 +91,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
         <table className="table">
           <thead>
             <tr>
+              <th>File ID</th>
               <th>Name</th>
               <th>DOB</th>
               <th>Aadhaar</th>
@@ -111,6 +112,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
           return (
           <React.Fragment key={r.doc_id}>
             <tr>
+              <td>{r.file_id}</td>
               <td>
                   <EditableCell 
                     value={r.name}

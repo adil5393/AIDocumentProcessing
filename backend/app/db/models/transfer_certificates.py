@@ -41,9 +41,11 @@ class TransferCertificate(Base):
 
     # FK → uploaded_files
     file_id = Column(
-        Integer,
-        ForeignKey("uploaded_files.file_id", ondelete="CASCADE")
-    )
+    Integer,
+    ForeignKey("uploaded_files.file_id", ondelete="CASCADE"),
+    unique=True,
+    nullable=False
+)
 
     __table_args__ = (
         Index(

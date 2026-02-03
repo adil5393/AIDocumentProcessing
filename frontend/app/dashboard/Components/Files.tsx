@@ -108,6 +108,7 @@ const deleteFile = async (id: number) => {
     <table className="table">
       <thead>
         <tr>
+          <th>File ID</th>
           <th>Name</th>
           <th>Doc Type</th>
           <th>OCR</th>
@@ -123,6 +124,7 @@ const deleteFile = async (id: number) => {
         {rows.map((f,index) => { 
           return (
           <tr key={f.file_id}>
+            <td>{f.file_id}</td>
             <td>{f.display_name}</td>
             <td>{f.doc_type}</td>
             <td>{ (f.ocr_done&& f.extraction_error)   ?  (<button className="btn" onClick={()=>setOcrExPending(f.file_id)}> Re-OCR </button>): "✓"}</td>

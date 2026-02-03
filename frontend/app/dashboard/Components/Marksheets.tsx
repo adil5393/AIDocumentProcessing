@@ -70,6 +70,7 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
         <table className="table">
           <thead>
             <tr>
+              <th>File ID</th>
               <th>Student Name</th>
               <th>Father Name</th>
               <th>Mother Name</th>
@@ -86,6 +87,7 @@ const filteredRows = rows.filter( r=> matchesSearch(search, r.student_name))
             return(
               <React.Fragment key={r.doc_id}>
                 <tr>
+                  <td>{r.file_id}</td>
                   <td>
                     <EditableCell
                       value={r.student_name}
