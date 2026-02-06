@@ -62,10 +62,12 @@ def run_tc_lookup(db, doc_id: int):
         signals["dob_match"] = (
             tc_dob and r.date_of_birth and tc_dob == r.date_of_birth
         )
-
-        signals["class_match"] = (
-            tc_class and r.class_name and int(tc_class)+1 == int(r.class_name)
-        )
+        try:
+            signals["class_match"] = (
+                tc_class and r.class_name and int(tc_class)+1 == int(r.class_name)
+            )
+        except ValueError:
+            signals["class_match"] = False
 
         total_score = (
             0.6 * signals["student_name_score"]
