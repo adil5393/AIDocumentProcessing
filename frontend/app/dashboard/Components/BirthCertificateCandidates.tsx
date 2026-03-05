@@ -9,6 +9,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 type BirthCertificateCandidate = {
   sr: string;
   student_name: string;
+  father_name: string;
+  mother_name: string;
   total_score: number;
   signals: Record<string, any>;
 };
@@ -41,11 +43,13 @@ export default function BirthCertificateCandidates({
   if (!rows.length) return <p>No birth certificate matches found.</p>;
 
   return (
-    <table width="100%" border={1} cellPadding={6}>
+    <table className="table">
       <thead>
         <tr>
           <th>SR</th>
           <th>Name</th>
+          <th>Father</th>
+          <th>Mother</th>
           <th>Score</th>
           <th>Signals</th>
           <th>Action</th>
@@ -57,6 +61,8 @@ export default function BirthCertificateCandidates({
           <tr key={i}>
             <td>{r.sr}</td>
             <td>{r.student_name}</td>
+            <td>{r.father_name}</td>
+            <td>{r.mother_name}</td>
             <td>{r.total_score.toFixed(2)}</td>
             <td>
               {Object.entries(r.signals).map(([k, v]) => (
@@ -67,10 +73,7 @@ export default function BirthCertificateCandidates({
               <button
                 className="btn"
                 onClick={async () => {
-                  if (
-                    !confirm("Confirm this Birth Certificate match?")
-                  )
-                    return;
+                  if (!confirm("Confirm this Birth Certificate match?")) return;
 
                   await apiFetch(
                     `${API_BASE}/api/birth-certificates/${docId}/confirm`,

@@ -713,6 +713,8 @@ def get_tc_candidates(
             SELECT
                 tcc.sr,
                 af.student_name,
+                af.father_name,
+                af.mother_name,
                 tcc.total_score,
                 tcc.signals
             FROM transfer_certificate_candidates tcc
@@ -727,7 +729,9 @@ def get_tc_candidates(
     return [
         {
             "sr": r.sr,
-            "student_name":r.student_name,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
             "total_score": float(r.total_score),
             "signals": r.signals if isinstance(r.signals, dict)
                        else json.loads(r.signals)
@@ -746,6 +750,8 @@ def get_ms_candidates(
             SELECT
                 ms.sr,
                 af.student_name,
+                af.father_name,
+                af.mother_name,
                 ms.total_score,
                 ms.signals
             FROM marksheet_candidates ms
@@ -760,7 +766,9 @@ def get_ms_candidates(
     return [
         {
             "sr": r.sr,
-            "student_name":r.student_name,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
             "total_score": float(r.total_score),
             "signals": r.signals if isinstance(r.signals, dict)
                        else json.loads(r.signals)
@@ -779,6 +787,8 @@ def get_bc_candidates(
             SELECT
                 bc.sr,
                 af.student_name,
+                af.father_name,
+                af.mother_name,
                 bc.total_score,
                 bc.signals
             FROM birth_certificate_candidates bc
@@ -793,7 +803,9 @@ def get_bc_candidates(
     return [
         {
             "sr": r.sr,
-            "student_name":r.student_name,
+            "student_name": r.student_name,
+            "father_name": r.father_name,
+            "mother_name": r.mother_name,
             "total_score": float(r.total_score),
             "signals": r.signals if isinstance(r.signals, dict)
                        else json.loads(r.signals)

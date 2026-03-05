@@ -9,6 +9,8 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 type MarksheetCandidate = {
   sr: string;
   student_name: string;
+  father_name: string;
+  mother_name: string;
   total_score: number;
   signals: Record<string, any>;
 };
@@ -41,11 +43,13 @@ export default function MarksheetCandidates({
   if (!rows.length) return <p>No marksheet matches found.</p>;
 
   return (
-    <table width="100%" border={1} cellPadding={6}>
+    <table className="table">
       <thead>
         <tr>
           <th>SR</th>
           <th>Name</th>
+          <th>Father</th>
+          <th>Mother</th>
           <th>Score</th>
           <th>Signals</th>
           <th>Action</th>
@@ -57,6 +61,8 @@ export default function MarksheetCandidates({
           <tr key={i}>
             <td>{r.sr}</td>
             <td>{r.student_name}</td>
+            <td>{r.father_name}</td>
+            <td>{r.mother_name}</td>
             <td>{r.total_score.toFixed(2)}</td>
             <td>
               {Object.entries(r.signals).map(([k, v]) => (
