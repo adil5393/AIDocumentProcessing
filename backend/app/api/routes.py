@@ -1137,16 +1137,18 @@ def confirm_aadhaar_match(
                 "method": method,
             }
         )
+        # Delete all candidates and mark confirmed (same as student path)
+        db.execute(
+            text("DELETE FROM aadhaar_lookup_candidates WHERE doc_id = :doc_id"),
+            {"doc_id": doc_id}
+        )
         db.execute(
             text("""
-                DELETE FROM aadhaar_lookup_candidates
+                UPDATE aadhaar_documents
+                SET lookup_status = 'confirmed', lookup_checked_at = now()
                 WHERE doc_id = :doc_id
-                AND sr = :sr
             """),
-            {
-                "doc_id": doc_id,
-                "sr": sr,
-            }
+            {"doc_id": doc_id}
         )
 
     # update_sql = ROLE_UPDATE_SQL.get(role)

@@ -37,8 +37,16 @@ def run_aadhaar_lookup(db, doc_id: int, preloaded=None, top_n: int = 50):
 
     preloaded (optional): dict with:
         "forms"            – list of dicts with pre-computed name tokens
-        "confirmed_matches"– set of (sr_number, aadhaar_doc_id) tuples
+        "confirmed_matches"– set of (sr_number, aadhaar_doc_id) tuples (may be stale)
     """
+
+    # Guard: never re-process a confirmed document
+    current_status = db.execute(
+        text("SELECT lookup_status FROM aadhaar_documents WHERE doc_id = :d"),
+        {"d": doc_id}
+    ).scalar()
+    if current_status == "confirmed":
+        return {"status": "skipped"}
 
     aadhaar = db.execute(
         text("""
@@ -140,9 +148,15 @@ def run_aadhaar_lookup(db, doc_id: int, preloaded=None, top_n: int = 50):
 
     if not candidates:
         if preloaded is not None:
-            # Batch mode: reuse pre-loaded, pre-tokenised forms
-            confirmed = preloaded.get("confirmed_matches", set())
-            rows = [f for f in preloaded["forms"] if (f["sr"], doc_id) not in confirmed]
+            # Batch mode: use pre-loaded forms but re-query confirmed SRs fresh
+            # (preloaded confirmed_matches may be stale if user confirmed during batch)
+            fresh_confirmed = {
+                r.sr_number for r in db.execute(
+                    text("SELECT sr_number FROM aadhaar_matches WHERE aadhaar_doc_id = :d"),
+                    {"d": doc_id}
+                ).fetchall()
+            }
+            rows = [f for f in preloaded["forms"] if f["sr"] not in fresh_confirmed]
         else:
             # Single-doc mode: fetch from DB and tokenise now
             raw = db.execute(
@@ -253,11 +267,12 @@ def run_aadhaar_lookup(db, doc_id: int, preloaded=None, top_n: int = 50):
             ],
         )
 
+    # Guard: never overwrite a 'confirmed' status set by the user mid-batch
     db.execute(
         text("""
             UPDATE aadhaar_documents
             SET lookup_status = :st, lookup_checked_at = now()
-            WHERE doc_id = :d
+            WHERE doc_id = :d AND lookup_status != 'confirmed'
         """),
         {"st": status, "d": doc_id}
     )

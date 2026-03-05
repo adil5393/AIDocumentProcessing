@@ -20,6 +20,14 @@ def run_tc_lookup(db, doc_id: int, preloaded=None, top_n: int = 50):
     if not row:
         return {"status": "error"}
 
+    # Guard: never re-process a confirmed document
+    current_status = db.execute(
+        text("SELECT lookup_status FROM transfer_certificates WHERE doc_id = :t"),
+        {"t": doc_id}
+    ).scalar()
+    if current_status == "Confirmed":
+        return {"status": "skipped"}
+
     tc_student_tokens = normalize_name(row.student_name)
     tc_father_tokens  = normalize_name(row.father_name)
     tc_mother_tokens  = normalize_name(row.mother_name)
@@ -113,7 +121,7 @@ def run_tc_lookup(db, doc_id: int, preloaded=None, top_n: int = 50):
         text("""
             UPDATE transfer_certificates
             SET lookup_status = :st, lookup_checked_at = now()
-            WHERE doc_id = :t
+            WHERE doc_id = :t AND lookup_status != 'Confirmed'
         """),
         {"st": status, "t": doc_id}
     )
