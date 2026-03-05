@@ -171,7 +171,6 @@ const deleteFile = async (id: number) => {
                 `${API_BASE}/api/unlock/${password}/edit`,
                 { method: "POST" }
               );
-              refresh();
               if (!res.ok) {
                 alert("Invalid password");
                 return;
@@ -181,8 +180,7 @@ const deleteFile = async (id: number) => {
                 `${API_BASE}/api/files/${f.file_id}/unlock`,
                 { method: "POST" }
               );
-
-              // loadFiles(); // ← refresh from backend
+              refresh();
             }}
             onLock={async () => {
               await apiFetch(

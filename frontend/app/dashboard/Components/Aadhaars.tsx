@@ -1,15 +1,16 @@
 "use client";
 
 import AadhaarLookupCandidates from "./AadhaarCandidates";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
 import DocumentPreviewRow from "./DocumentPreviewRow";
-import { matchesSearch } from "../Utils/Search";
 import EditableCell from "./EditableCell";
 import LockButton from "../LockButton/LockButton";
 import { useRowLock } from "../LockButton/useRowLock";
+import { usePaginatedApi } from "../Pagination/PaginatedApi";
+import Pagination from "../Pagination/Pagination";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
@@ -32,61 +33,54 @@ type Props = {
 };
 
 export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) {
-  const [rows, setRows] = useState<AadhaarRow[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [openPreviewDocId, setOpenPreviewDocId] = useState<number | null>(null);
-  
-  const {
-      isRowEditable,
-      setRow
-    } = useRowLock<number>();
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  function fetchAadhaarDocuments() {
-    apiFetch(`${API_BASE}/api/aadhaar-documents`)
-      .then(res => res.json())
-      .then(setRows)
-      .catch(console.error);
-  }
+  const {
+    isRowEditable,
+    setRow
+  } = useRowLock<number>();
+
+  const {
+    items: rows,
+    page,
+    pageSize,
+    total,
+    setPage,
+    refresh,
+  } = usePaginatedApi<AadhaarRow>(
+    `${API_BASE}/api/aadhaar-documents`,
+    search,
+    50,
+    [refreshKey],
+  );
+
   async function runPendingLookups() {
     const res = await apiFetch(
       `${API_BASE}/api/aadhaar/lookup/pending`,
       { method: "POST" }
     );
-
-  const data = await res.json();
-  alert(`Processed ${data.processed_count} Aadhaar document(s)`);
-
-  fetchAadhaarDocuments();
-}
-  const filteredRows = rows.filter(r =>
-  matchesSearch(
-    search,
-    r.name,
-  )
-);
-
-  
+    const data = await res.json();
+    alert(`Processed ${data.processed_count} Aadhaar document(s)`);
+    setRefreshKey(k => k + 1);
+  }
 
   async function rerunLookup(docId: number) {
     await apiFetch(
       `${API_BASE}/api/aadhaar/${docId}/lookup?force=true`,
       { method: "POST" }
     );
-    fetchAadhaarDocuments();
+    refresh();
   }
-
-  useEffect(() => {
-    fetchAadhaarDocuments();
-  }, [refreshKey]);
 
   return (
     <>
-          <button className="btn"
-            onClick={()=>{runPendingLookups(); setRefreshKey(k=>k+1);}}
-            style={{ marginBottom: 10 }}
-          >
-            Run Lookup for Pending Aadhaar Documents
-          </button>
+      <button className="btn"
+        onClick={runPendingLookups}
+        style={{ marginBottom: 10 }}
+      >
+        Run Lookup for Pending Aadhaar Documents
+      </button>
       <div style={{ overflowX: "auto" }}>
         <table className="table">
           <thead>
@@ -102,56 +96,55 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
               <th>Checked At</th>
               <th>Action</th>
               <th>Unlock To Edit</th>
-              
             </tr>
           </thead>
 
          <tbody>
-          {filteredRows.map(r => {
+          {rows.map(r => {
           const editable = isRowEditable(r.doc_id);
           return (
           <React.Fragment key={r.doc_id}>
             <tr>
               <td>{r.file_id}</td>
               <td>
-                  <EditableCell 
+                  <EditableCell
                     value={r.name}
                     id={r.doc_id}
                     field="name"
                     endpoint="aadhaars"
-                    onSaved={()=>setRefreshKey(k => k+1)}
+                    onSaved={refresh}
                     editable={editable}
                   />
               </td>
               <td>
-                  <EditableCell 
+                  <EditableCell
                     value={r.date_of_birth || "-"}
                     id={r.doc_id}
                     field="date_of_birth"
                     endpoint="aadhaars"
-                    onSaved={()=>setRefreshKey(k => k+1)}
+                    onSaved={refresh}
                     editable={editable}
                   />
               </td>
               <td>
-                  <EditableCell 
+                  <EditableCell
                     value={r.aadhaar_number || "-"}
                     id={r.doc_id}
                     field="aadhaar_number"
                     endpoint="aadhaars"
-                    onSaved={()=>setRefreshKey(k => k+1)}
+                    onSaved={refresh}
                     editable={editable}
                   />
               </td>
               <td>{r.relation_type || "-"}</td>
-              
+
               <td>
-              <EditableCell 
+              <EditableCell
                     value={r.related_name || "-"}
                     id={r.doc_id}
                     field="related_name"
                     endpoint="aadhaars"
-                    onSaved={()=>setRefreshKey(k => k+1)}
+                    onSaved={refresh}
                     editable={editable}
                   />
               </td>
@@ -198,18 +191,15 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                 {r.lookup_status !== "pending" && (
                   <button
                     className="btn"
-                    onClick={() => {
-                      rerunLookup(r.doc_id);
-                      setRefreshKey(k => k + 1);
-                    }}
+                    onClick={() => rerunLookup(r.doc_id)}
                     style={{ fontSize: 12, marginLeft: 6 }}
                   >
                     Re-run Lookup
                   </button>
                 )}
               </td>
-              <td><LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)} /></td>             
-            </tr> 
+              <td><LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)} /></td>
+            </tr>
             {openPreviewDocId === r.doc_id && (
               <DocumentPreviewRow
                 key={`preview-${r.file_id}`}
@@ -223,10 +213,10 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                 <td colSpan={10} className="expanded-row">
                   <div className="aadhaar-expanded">
 
-                    {/* ✅ Confirmed matches FIRST */}
+                    {/* Confirmed matches FIRST */}
                     <AadhaarMatchesConfirmed docId={r.doc_id} refreshKey={refreshKey} setRefreshKey={setRefreshKey}/>
 
-                    {/* 🔽 Candidates BELOW */}
+                    {/* Candidates BELOW */}
                     <AadhaarLookupCandidates docId={r.doc_id} refreshKey={refreshKey} setRefreshKey={setRefreshKey}/>
 
                   </div>
@@ -239,6 +229,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
 
         </table>
       </div>
+      <Pagination page={page} pageSize={pageSize} total={total} onPageChange={setPage} />
     </>
   );
 }

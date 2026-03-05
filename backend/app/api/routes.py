@@ -444,9 +444,16 @@ def list_admission_forms(
 
 @router.get("/aadhaar-documents")
 def list_aadhaar_documents(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
+
     rows = db.execute(text("""
         SELECT
             d.doc_id,
@@ -466,12 +473,34 @@ def list_aadhaar_documents(
         LEFT JOIN aadhaar_matches m
                ON m.aadhaar_doc_id = d.doc_id
 
+        WHERE (
+            :search IS NULL
+            OR d.name ILIKE '%' || :search || '%'
+            OR CAST(d.file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
+
         GROUP BY d.doc_id
 
         ORDER BY d.created_at DESC, d.file_id DESC
-    """)).mappings().all()
+        LIMIT :page_size OFFSET :offset
+    """), {"search": search, "page_size": page_size, "offset": offset}).mappings().all()
 
-    return rows
+    total = db.execute(text("""
+        SELECT COUNT(*)
+        FROM aadhaar_documents d
+        WHERE (
+            :search IS NULL
+            OR d.name ILIKE '%' || :search || '%'
+            OR CAST(d.file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
+    """), {"search": search}).scalar()
+
+    return {
+        "items": rows,
+        "page": page,
+        "page_size": page_size,
+        "total": total,
+    }
 
 @router.get("/transfer-certificates")
 def list_transfer_certificates(
@@ -619,6 +648,7 @@ def get_aadhaar_candidates(
           ON af.sr = c.sr
         WHERE c.doc_id = :d
         ORDER BY c.total_score DESC
+        LIMIT 20
     """),
     {"d": doc_id}
 ).fetchall()
