@@ -1,7 +1,7 @@
 "use client";
 
 import AadhaarLookupCandidates from "./AadhaarCandidates";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiFetch } from "../../lib/api";
 import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
@@ -55,14 +55,25 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
     [refreshKey],
   );
 
+  const hasPending = rows.some(r => r.lookup_status === "pending");
+
+  useEffect(() => {
+    if (!hasPending) return;
+    const id = setInterval(() => refresh(), 2000);
+    return () => clearInterval(id);
+  }, [hasPending, refresh]);
+
   async function runPendingLookups() {
     const res = await apiFetch(
       `${API_BASE}/api/aadhaar/lookup/pending`,
       { method: "POST" }
     );
     const data = await res.json();
-    alert(`Processed ${data.processed_count} Aadhaar document(s)`);
-    setRefreshKey(k => k + 1);
+    if (data.queued === 0) {
+      alert("No pending Aadhaar lookups.");
+    } else {
+      setRefreshKey(k => k + 1);
+    }
   }
 
   async function rerunLookup(docId: number) {
@@ -75,11 +86,13 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
 
   return (
     <>
-      <button className="btn"
+      <button
+        className="btn"
         onClick={runPendingLookups}
+        disabled={hasPending}
         style={{ marginBottom: 10 }}
       >
-        Run Lookup for Pending Aadhaar Documents
+        {hasPending ? "⏳ Running Lookups…" : "Run Lookup for Pending Aadhaar Documents"}
       </button>
       <div style={{ overflowX: "auto" }}>
         <table className="table">

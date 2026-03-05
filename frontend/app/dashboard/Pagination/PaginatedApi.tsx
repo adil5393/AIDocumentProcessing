@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../lib/api";
 
 export function usePaginatedApi<T>(
@@ -54,6 +54,6 @@ export function usePaginatedApi<T>(
     total,
     loading,
     setPage,
-    refresh: () => setReloadKey(k => k + 1),
+    refresh: useCallback(() => setReloadKey(k => k + 1), []),
   };
 }

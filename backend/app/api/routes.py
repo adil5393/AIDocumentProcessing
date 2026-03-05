@@ -11,7 +11,7 @@ from app.db.session import get_db
 from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
 from datetime import datetime, timedelta,date
-from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
+from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup, run_aadhaar_batch
 from typing import Dict, Any
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
@@ -504,9 +504,16 @@ def list_aadhaar_documents(
 
 @router.get("/transfer-certificates")
 def list_transfer_certificates(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
+
     rows = db.execute(text("""
         SELECT
             doc_id,
@@ -520,27 +527,37 @@ def list_transfer_certificates(
             last_school_name,
             created_at
         FROM transfer_certificates
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
         ORDER BY created_at DESC, file_id DESC
-    """)).fetchall()
+        LIMIT :page_size OFFSET :offset
+    """), {"search": search, "page_size": page_size, "offset": offset}).mappings().all()
 
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id":r.file_id,
-            "student_name": r.student_name,
-            "father_name": r.father_name,
-            "mother_name": r.mother_name,
-            "date_of_birth": r.date_of_birth,
-            "lookup_status":r.lookup_status,
-            "last_class_studied": r.last_class_studied,
-            "last_school_name": r.last_school_name,
-            "created_at": r.created_at,
-        }
-        for r in rows
-    ]
+    total = db.execute(text("""
+        SELECT COUNT(*) FROM transfer_certificates
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
+    """), {"search": search}).scalar()
+
+    return {"items": rows, "page": page, "page_size": page_size, "total": total}
 
 @router.get("/marksheets")
-def list_marksheets(db: Session = Depends(get_db)):
+def list_marksheets(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
+    db: Session = Depends(get_db)
+):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
+
     rows = db.execute(text("""
         SELECT
             doc_id,
@@ -551,26 +568,38 @@ def list_marksheets(db: Session = Depends(get_db)):
             date_of_birth,
             lookup_status,
             last_checked_at
-        FROM marksheets 
+        FROM marksheets
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
         ORDER BY last_checked_at DESC, file_id DESC
-    """)).fetchall()
+        LIMIT :page_size OFFSET :offset
+    """), {"search": search, "page_size": page_size, "offset": offset}).mappings().all()
 
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id": r.file_id,
-            "student_name": r.student_name,
-            "father_name": r.father_name,
-            "mother_name": r.mother_name,
-            "dob": r.date_of_birth,
-            "lookup_status": r.lookup_status,
-            "last_checked_at": r.last_checked_at,
-        }
-        for r in rows
-    ]
+    total = db.execute(text("""
+        SELECT COUNT(*) FROM marksheets
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
+    """), {"search": search}).scalar()
+
+    return {"items": rows, "page": page, "page_size": page_size, "total": total}
 
 @router.get("/birth-certificates")
-def list_marksheets(db: Session = Depends(get_db)):
+def list_birth_certificates(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=10, le=200),
+    search: str | None = None,
+    db: Session = Depends(get_db)
+):
+    if search == "":
+        search = None
+    offset = (page - 1) * page_size
+
     rows = db.execute(text("""
         SELECT
             doc_id,
@@ -581,23 +610,26 @@ def list_marksheets(db: Session = Depends(get_db)):
             date_of_birth,
             lookup_status,
             last_checked_at
-        FROM birth_certificates 
+        FROM birth_certificates
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
         ORDER BY last_checked_at DESC, file_id DESC
-    """)).fetchall()
+        LIMIT :page_size OFFSET :offset
+    """), {"search": search, "page_size": page_size, "offset": offset}).mappings().all()
 
-    return [
-        {
-            "doc_id": r.doc_id,
-            "file_id": r.file_id,
-            "student_name": r.student_name,
-            "father_name": r.father_name,
-            "mother_name": r.mother_name,
-            "dob": r.date_of_birth,
-            "lookup_status": r.lookup_status,
-            "last_checked_at": r.last_checked_at,
-        }
-        for r in rows
-    ]
+    total = db.execute(text("""
+        SELECT COUNT(*) FROM birth_certificates
+        WHERE (
+            :search IS NULL
+            OR student_name ILIKE '%' || :search || '%'
+            OR CAST(file_id AS TEXT) ILIKE '%' || :search || '%'
+        )
+    """), {"search": search}).scalar()
+
+    return {"items": rows, "page": page, "page_size": page_size, "total": total}
     
 @router.get("/uploads")
 def list_uploads(_: str = Depends(require_token)):
@@ -801,31 +833,31 @@ def aadhaar_lookup(
 
 @router.post("/aadhaar/lookup/pending")
 def run_pending_aadhaar_lookups(
+    background_tasks: BackgroundTasks,
     _: str = Depends(require_token),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    
     rows = db.execute(
         text("""
-    SELECT doc_id
-    FROM aadhaar_documents
-    where lookup_status not in ('confirmed')
-""")
+            SELECT doc_id
+            FROM aadhaar_documents
+            WHERE lookup_status NOT IN ('confirmed')
+        """)
     ).fetchall()
-    processed = 0
-    for r in rows:
-        try:
-            run_aadhaar_lookup(db, r.doc_id)
-            processed += 1
-        except Exception as e:
-            # do NOT crash whole batch
-            print (e)
-            continue
+    doc_ids = [r.doc_id for r in rows]
 
-    return {
-        "message": "Pending Aadhaar lookups processed",
-        "processed_count": processed
-    }   
+    if not doc_ids:
+        return {"message": "No pending lookups", "queued": 0}
+
+    # Reset statuses to 'pending' immediately so the frontend can start polling
+    db.execute(
+        text("UPDATE aadhaar_documents SET lookup_status = 'pending' WHERE doc_id = ANY(:ids)"),
+        {"ids": doc_ids}
+    )
+    db.commit()
+
+    background_tasks.add_task(run_aadhaar_batch, doc_ids)
+    return {"message": f"Started background lookup for {len(doc_ids)} documents", "queued": len(doc_ids)}
 
 @router.post("/tc/{doc_id}/lookup")
 def rerun_tc_lookup(
@@ -855,10 +887,11 @@ def rerun_tc_lookup(
 
 @router.post("/tc/lookup/pending")
 def run_pending_tc_lookups(
+    background_tasks: BackgroundTasks,
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+    from app.jobs.run_transfer_certificate_lookup import run_tc_batch
 
     rows = db.execute(
         text("""
@@ -867,11 +900,19 @@ def run_pending_tc_lookups(
             WHERE lookup_status IS DISTINCT FROM 'Confirmed'
         """)
     ).fetchall()
+    doc_ids = [r.doc_id for r in rows]
 
-    for r in rows:
-        run_tc_lookup(db, r.doc_id)
+    if not doc_ids:
+        return {"message": "No pending lookups", "queued": 0}
 
-    return {"processed_count": len(rows)}
+    db.execute(
+        text("UPDATE transfer_certificates SET lookup_status = 'pending' WHERE doc_id = ANY(:ids)"),
+        {"ids": doc_ids}
+    )
+    db.commit()
+
+    background_tasks.add_task(run_tc_batch, doc_ids)
+    return {"message": f"Started background lookup for {len(doc_ids)} documents", "queued": len(doc_ids)}
 
 @router.post("/marksheets/{doc_id}/lookup")
 def rerun_marksheet_lookup(
@@ -902,10 +943,11 @@ def rerun_marksheet_lookup(
 
 @router.post("/marksheet/lookup/pending")
 def run_pending_marksheet_lookups(
+    background_tasks: BackgroundTasks,
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_marksheet_lookup import run_marksheet_lookup
+    from app.jobs.run_marksheet_lookup import run_marksheet_batch
 
     rows = db.execute(
         text("""
@@ -914,11 +956,19 @@ def run_pending_marksheet_lookups(
             WHERE lookup_status IS DISTINCT FROM 'Confirmed'
         """)
     ).fetchall()
+    doc_ids = [r.doc_id for r in rows]
 
-    for r in rows:
-        run_marksheet_lookup(db, r.doc_id)
+    if not doc_ids:
+        return {"message": "No pending lookups", "queued": 0}
 
-    return {"processed_count": len(rows)}
+    db.execute(
+        text("UPDATE marksheets SET lookup_status = 'pending' WHERE doc_id = ANY(:ids)"),
+        {"ids": doc_ids}
+    )
+    db.commit()
+
+    background_tasks.add_task(run_marksheet_batch, doc_ids)
+    return {"message": f"Started background lookup for {len(doc_ids)} documents", "queued": len(doc_ids)}
 
 @router.post("/bc/{doc_id}/lookup")
 def rerun_bc_lookup(
@@ -948,10 +998,11 @@ def rerun_bc_lookup(
     
 @router.post("/bc/lookup/pending")
 def run_pending_bc_lookups(
+    background_tasks: BackgroundTasks,
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_bc_lookup import run_bc_lookup
+    from app.jobs.run_bc_lookup import run_bc_batch
 
     rows = db.execute(
         text("""
@@ -960,11 +1011,19 @@ def run_pending_bc_lookups(
             WHERE lookup_status IS DISTINCT FROM 'Confirmed'
         """)
     ).fetchall()
+    doc_ids = [r.doc_id for r in rows]
 
-    for r in rows:
-        run_bc_lookup(db, r.doc_id)
+    if not doc_ids:
+        return {"message": "No pending lookups", "queued": 0}
 
-    return {"processed_count": len(rows)}
+    db.execute(
+        text("UPDATE birth_certificates SET lookup_status = 'pending' WHERE doc_id = ANY(:ids)"),
+        {"ids": doc_ids}
+    )
+    db.commit()
+
+    background_tasks.add_task(run_bc_batch, doc_ids)
+    return {"message": f"Started background lookup for {len(doc_ids)} documents", "queued": len(doc_ids)}
 
 @router.post("/aadhaar/{doc_id}/{sr:path}/confirm")
 def confirm_aadhaar_match(
@@ -2545,6 +2604,7 @@ def students_overview(
             WHERE (
                 :search IS NULL
                 OR student_name ILIKE '%' || :search || '%'
+                OR sr::text ILIKE '%' || :search || '%'
             );"""),{"search":search}
     ).scalar()
     return {
