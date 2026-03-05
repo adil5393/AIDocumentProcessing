@@ -15,7 +15,7 @@ interface MarksheetRow {
   student_name: string;
   father_name: string;
   mother_name: string;
-  dob: string;
+  date_of_birth: string;
   lookup_status?: string;
 }
 type Props = {
@@ -101,7 +101,7 @@ export default function Marksheets({ API_BASE, search }: Props) {
                       <EditableCell value={r.mother_name} id={r.doc_id} field="mother_name" endpoint="marksheets" onSaved={refresh} editable={editable} />
                     </td>
                     <td>
-                      <EditableCell value={r.dob} id={r.doc_id} field="date_of_birth" endpoint="marksheets" onSaved={refresh} editable={editable} />
+                      <EditableCell value={r.date_of_birth} id={r.doc_id} field="date_of_birth" endpoint="marksheets" onSaved={refresh} editable={editable} />
                     </td>
                     <td>{r.lookup_status || "-"}</td>
                     <td>
