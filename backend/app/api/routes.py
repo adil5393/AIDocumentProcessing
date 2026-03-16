@@ -813,6 +813,20 @@ def get_bc_candidates(
         for r in rows
     ]
 
+@router.post("/aadhaar/{doc_id}/set-no-match")
+def aadhaar_set_no_match(
+    doc_id: int,
+    _: str = Depends(require_token),
+    db: Session = Depends(get_db),
+):
+    db.execute(
+        text("UPDATE aadhaar_documents SET lookup_status = 'no_match' WHERE doc_id = :d"),
+        {"d": doc_id},
+    )
+    db.commit()
+    return {"status": "ok", "doc_id": doc_id, "lookup_status": "no_match"}
+
+
 @router.post("/aadhaar/{doc_id}/lookup")
 def aadhaar_lookup(
     

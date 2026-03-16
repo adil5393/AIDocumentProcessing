@@ -108,6 +108,7 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
               <th>Lookup Status</th>
               <th>Checked At</th>
               <th>Action</th>
+              <th>Set Status</th>
               <th>Unlock To Edit</th>
             </tr>
           </thead>
@@ -210,6 +211,20 @@ export default function Aadhaars({ selectedDocId, onSelectDoc, search }: Props) 
                     Re-run Lookup
                   </button>
                 )}
+              </td>
+              <td>
+             
+                  <button
+                    className="btn"
+                    style={{ fontSize: 12 }}
+                    onClick={async () => {
+                      await apiFetch(`${API_BASE}/api/aadhaar/${r.doc_id}/set-no-match`, { method: "POST" });
+                      refresh();
+                    }}
+                  >
+                    Set No Match
+                  </button>
+                
               </td>
               <td><LockButton rowId={r.doc_id} unlocked={editable} onChange={state => setRow(r.doc_id, state)} /></td>
             </tr>
