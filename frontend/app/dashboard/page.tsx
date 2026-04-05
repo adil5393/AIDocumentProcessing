@@ -1,22 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isLoggedIn, logout } from "../lib/auth";
-import { apiFetch } from "../lib/api";
+import { isLoggedIn, logout } from "../Lib/Auth";
+import { apiFetch } from "../Lib/Api";
 import AdmissionForms from "./Components/AdmissionForms";
 import Aadhaars from "./Components/Aadhaars";
 import TransferCerts from "./Components/TransferCerts";
-import "./Components/dashboard.css";
+import "./Components/Dashboard.css";
 import Files from "./Components/Files";
 import CrossReview from "./Components/CrossReview";
 import LayoverModal from "./Components/LayoverModal";
 import Marksheets from "./Components/Marksheets";
-import './Components/header.css'
+import './Components/Header.css'
 import BirthCertificates from "./Components/Birthcertificates";
 import TabGroup from "./Tabs/TabGroup";
 import { FileSubTab } from "./Tabs/TabGroup";
 import DateRangePicker from "./DateRange/DateRange";
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000";
 
 type FileRow = {
   file_id: number;
@@ -24,7 +25,7 @@ type FileRow = {
   display_name: string;
   doc_type: string;
   ocr_done: boolean;
-  extracted_raw: Record<string, any> | null;
+  extracted_raw: Record<string, unknown> | null;
   extraction_done: boolean;
   extraction_error: string | null;
 };
@@ -40,12 +41,7 @@ const fileTabs = [
   { id: "extraction_error", label: "Extraction Errors" },
 ] satisfies { id: FileSubTab; label: string }[];
 
-const admissionTabs = [
-{id: "all",label:"All Admission Forms"},
-{id: ""}]
-
 export default function Dashboard() {
-  const [running, setRunning] = useState(false);
   const [tab, setTab] = useState<Tab>("files");
   const [status, setStatus] = useState("");
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -59,7 +55,7 @@ export default function Dashboard() {
   });
 
   function exportExcel() {
-    apiFetch(`${API_BASE}/api/export/student-documents.xlsx`)
+    apiFetch("/api/export/student-documents.xlsx")
       .then(res => {
         if (!res.ok) throw new Error("Export failed");
         return res.blob();
@@ -83,7 +79,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (!isLoggedIn()) {
-      window.location.href = "/login";
+      window.location.href = "/Login";
       return;
     }
   }, []); 
@@ -108,13 +104,12 @@ useEffect(() => {
   setStatus(`Uploading ${selectedFiles.length} files...`);
 
   try {
-    const res = await apiFetch(`${API_BASE}/api/upload`, {
-      method: "POST",
+      const res = await apiFetch("/api/upload", {
       body: formData,
     });
 
     if (!res.ok) {
-      const err = await res.json();   // 👈 THIS was missing
+      const err = await res.json();  
       setStatus(err.detail || "Upload failed");
       return;
     }
@@ -128,24 +123,21 @@ useEffect(() => {
 
   const runPipeline = async () => {
     setStatus("Running OCR + extraction...");
-    setRunning(true);
 
     try {
-      const res = await apiFetch(`${API_BASE}/api/ocr/run`, {
+      const res = await apiFetch("/api/ocr/run", {
         method: "POST",
       });
 
       if (!res.ok) {
         const err = await res.text();
-        setRunning(false);
         setStatus(`Pipeline failed ❌: ${err}`);
         return;
       }
 
       setStatus("Pipeline started 🚀");
 
-    } catch (e) {
-      setRunning(false);
+    } catch {
       setStatus("Pipeline error ❌");
     }
   };

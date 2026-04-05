@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { apiFetch } from "../../lib/api";
-import "./dashboard.css";
+import { apiFetch } from "../../Lib/Api";
+import "./Dashboard.css";
 import FilesLockButton from "../LockButton/FileLockButton";
 import { useRef } from "react";
 import { usePaginatedApi } from "../Pagination/PaginatedApi";

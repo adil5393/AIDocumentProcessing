@@ -9,5 +9,5 @@ export function isLoggedIn() {
 
 export function logout() {
   localStorage.removeItem("token");
-  window.location.href = "/login";
+  window.location.href = "/Login";
 }

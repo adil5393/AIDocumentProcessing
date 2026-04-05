@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import './documentviewer.css'
+import './Documentviewer.css'
 import ZoomButtons from "../Utils/ZoomButtons";
 interface DocumentImageViewerProps {
   src: string;

@@ -3,10 +3,21 @@ import os
 import json
 import re
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+_client = None
+
+def _get_openai():
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "OPENAI_API_KEY env var is not set."
+            )
+        _client = OpenAI(api_key=api_key)
+    return _client
 
 def call_gpt(prompt: str) -> dict:
-    response = client.chat.completions.create(
+    response = _get_openai().chat.completions.create(
         model="gpt-4.1-mini",
         messages=[
             {"role": "system", "content": "You extract structured data from documents. Output ONLY valid JSON. No markdown."},
@@ -142,9 +153,7 @@ Rules:
   using standard Indian phonetic transliteration (not translation)
   Example: "राम कुमार" → "Ram Kumar"
 - If a name is already in English, preserve it verbatim
-- If a name contains a title such as "Mr", "Mrs", "Ms", "Miss", "Smt", "Shri",
-  Remove the title.
-- Do NOT remove titles or honorifics
+- If a name contains a title such as "Mr", "Mrs", "Ms", "Miss", "Smt", "Shri", remove the title
 - Do NOT invent titles if not present
 - Preserve original spacing and capitalization AFTER transliteration
 - If a field is missing, use null
@@ -297,6 +306,12 @@ def normalize_from_raw(doc_type: str, extracted_raw: dict) -> dict:
 
     if doc_type == "transfer_certificate":
         return extract_transfer_certificate_from_raw(extracted_raw)
+
+    if doc_type == "marksheet":
+        return extract_marksheet_from_raw(extracted_raw)
+
+    if doc_type == "birth_certificate":
+        return extract_birth_certificate_from_raw(extracted_raw)
 
     if doc_type == "marksheet":
         return extract_marksheet_from_raw(extracted_raw)

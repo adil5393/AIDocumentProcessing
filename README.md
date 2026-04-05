@@ -1,9 +1,9 @@
 # AIDocumentProcessing
 
-Feed Pdfs and Data updates on the school portal automatically.
+Feed Pdfs And Data Updates On The School Portal Automatically.
 ################################## SETUP #############################
 
-# install poppler- check /bachkend/app/utils/pdftopng.py for reference
+# install poppler- Check /backend/app/utils/pdftopng.py for reference
 
 # Create virtual env in the root
 

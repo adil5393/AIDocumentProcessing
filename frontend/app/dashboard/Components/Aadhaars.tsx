@@ -2,7 +2,7 @@
 
 import AadhaarLookupCandidates from "./AadhaarCandidates";
 import { useState, useEffect } from "react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 import React from "react";
 import AadhaarMatchesConfirmed from "./AadhaarMatchesConfirmed";
 import DocumentPreviewRow from "./DocumentPreviewRow";

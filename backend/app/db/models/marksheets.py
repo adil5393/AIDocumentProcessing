@@ -9,7 +9,7 @@ from sqlalchemy import (
     Index
 )
 from sqlalchemy.sql import func
-from backend.app.db.base import Base
+from App.Db.Base import Base
 
 
 class Marksheet(Base):

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 
 export function usePaginatedApi<T>(
   url: string,

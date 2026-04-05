@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/api";
-import "./dashboard.css";
+import { apiFetch } from "../../Lib/Api";
+import "./Dashboard.css";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 
