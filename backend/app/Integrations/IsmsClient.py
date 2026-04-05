@@ -53,10 +53,12 @@ def isms_post(path: str, token: str, payload: dict):
         "Accept": "application/json",
     }
 
+    import logging
+    _log = logging.getLogger(__name__)
+
     resp = requests.post(url, headers=headers, json=payload, timeout=20)
 
-    print("ISMS ERP STATUS CODE:", resp.status_code)
-    print("ISMS ERP RAW TEXT:", resp.text[:500])
+    _log.debug("ISMS ERP POST %s -> %s", path, resp.status_code)
 
     try:
         resp_json = resp.json()

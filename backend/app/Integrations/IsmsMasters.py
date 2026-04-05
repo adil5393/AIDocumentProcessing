@@ -89,7 +89,7 @@ def get_isms_masters_internal():
         token, expiry, user_id = load_token()
         valid, _ = is_token_valid(token)
         if not valid:
-            raise HTTPException(401, "ISMS ERP authentication failed � check ISMS_USERNAME / ISMS_PASSWORD")
+            raise HTTPException(401, "ISMS ERP authentication failed - check ISMS_USERNAME / ISMS_PASSWORD")
 
     # 2. Academic years ? find the active one
     ay_raw = isms_get("/api/academic-years/", token)

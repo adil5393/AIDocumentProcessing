@@ -313,10 +313,4 @@ def normalize_from_raw(doc_type: str, extracted_raw: dict) -> dict:
     if doc_type == "birth_certificate":
         return extract_birth_certificate_from_raw(extracted_raw)
 
-    if doc_type == "marksheet":
-        return extract_marksheet_from_raw(extracted_raw)
-
-    if doc_type == "birth_certificate":
-        return extract_birth_certificate_from_raw(extracted_raw)
-
     return {"error": "unsupported_document_type"}
