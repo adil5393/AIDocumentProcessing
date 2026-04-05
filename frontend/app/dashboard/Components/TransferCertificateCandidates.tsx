@@ -2,7 +2,7 @@
 
 import SignalBadge from "./SignalBadge";
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 import './EditableCell'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;

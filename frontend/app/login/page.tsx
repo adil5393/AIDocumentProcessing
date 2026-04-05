@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { isLoggedIn } from "../lib/auth";
-import './login.css'
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
+import { isLoggedIn } from "../Lib/Auth";
+import { apiFetch } from "../Lib/Api";
+import './Login.css'
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -13,7 +13,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isLoggedIn()) {
-      window.location.replace("/dashboard");
+      window.location.replace("/Dashboard");
     }
   }, []);
 
@@ -27,9 +27,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${API_BASE}/api/login`, {
+      const res = await apiFetch("/api/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
@@ -42,7 +41,7 @@ export default function LoginPage() {
       }
 
       localStorage.setItem("token", data.access_token);
-      window.location.replace("/dashboard");
+      window.location.replace("/Dashboard");
 
     } catch {
       setError("Server not reachable");

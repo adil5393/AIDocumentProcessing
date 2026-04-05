@@ -1,32 +1,40 @@
-#cloud document ai api
+# ─────────────────────────────────────────
+#  Google Cloud Document AI
+# ─────────────────────────────────────────
 PROJECT_ID=""
-LOCATION=""
-PROCESSOR_ID=""   # OCR Processor
-PREVIEW_DIR="uploads\\preview"
+LOCATION="us"
+PROCESSOR_ID=""
+GOOGLE_APPLICATION_CREDENTIALS=""
 
-#amtech
-BASE_URL=""
-AMTECH_BASE_URL=""
-AMTECH_BASE_URL_EXTENSION=""
-SESSION_ENDPOINT=""
-CLASSES_ENDPOINT=""
-SECTION_ENDPOINT=""
-CLASSSECTION_ENDPOINT=""
-ALLOW_DUMMY_POST=""
-#amtech auth
-LOGIN_URL_EXTENSION=""
-TOKEN_VALIDATION_URL_EXTENSION=""
-AMTECH_USERNAME=""
-AMTECH_PASSWORD=""
-ORIGIN_REFER=""
+DEV_MODE="True"
 
-DEV_MODE="true"
+# ─────────────────────────────────────────
+#  OpenAI
+# ─────────────────────────────────────────
+OPENAI_API_KEY=""
 
+# ─────────────────────────────────────────
+#  File Storage
+# ─────────────────────────────────────────
+UPLOADS_DIR="uploads"
+PREVIEW_DIR="uploads/preview"
 
-#psql DB
+# ─────────────────────────────────────────
+#  Database
+# ─────────────────────────────────────────
 DB_HOST=
 DB_PORT=
 DB_USER=
 DB_PASSWORD=
 DB_NAME=
 
+# ─────────────────────────────────────────
+#  ISMS ERP Integration
+# ─────────────────────────────────────────
+ISMS_BASE_URL="https://isms.newangelspratapgarh.in/"                      
+ISMS_USERNAME="ocr@newangels"                     
+ISMS_PASSWORD="Nasss@OCR#1608"                    
+ISMS_CREATE_STUDENT="/api/students/"  
+
+AUTH_TOKEN="21efe2c9e8d5e299f80abc7f17db2ab24cdf888f"                         
+EDIT_PWD="Nasss@OCR#1608"    

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.routes import router
+from App.Api.Routes import router
 
 app = FastAPI(
     title="Student AI Processing System",

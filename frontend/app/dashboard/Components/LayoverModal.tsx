@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE!;
 import { useEffect } from "react";
 import ZoomButtons from "../Utils/ZoomButtons";

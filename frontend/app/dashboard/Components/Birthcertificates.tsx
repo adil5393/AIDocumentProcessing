@@ -3,7 +3,7 @@ import EditableCell from "./EditableCell";
 import DocumentPreviewRow from "./DocumentPreviewRow";
 import BirthCertificateCandidates from "./BirthCertificateCandidates";
 import BirthCertificateMatches from "./BirthCertificateMatches";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 import LockButton from "../LockButton/LockButton";
 import { useRowLock } from "../LockButton/useRowLock";
 import { usePaginatedApi } from "../Pagination/PaginatedApi";

@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { apiFetch } from "../../lib/api";
+import { apiFetch } from "../../Lib/Api";
 import React from "react";
 import EditableCell from './EditableCell';
 import DocumentPreviewRow from "./DocumentPreviewRow";
-import PostStudentActionButton from "../Amtech/PostStudentActionButton"
-import './sidebar.css'
+import PostStudentActionButton from "../Isms/PostStudentActionButton"
+import './Sidebar.css'
 import { matchesSearch } from "../Utils/Search";
 import { usePaginatedApi } from "../Pagination/PaginatedApi";
 import Pagination from "../Pagination/Pagination";
@@ -355,7 +355,7 @@ export default function AdmissionForms({ search }: { search: string }) {
           </button>
           {editable && <PostStudentActionButton
             sr={r.sr}
-            endpoint={`/api/amtech/${r.sr}/post`}  // 👈 your POST route
+            endpoint={`/api/isms/${r.sr}/post`}  // 👈 your POST route
             onSuccess={refresh}
           />}
         </td>

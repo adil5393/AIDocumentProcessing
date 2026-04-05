@@ -1,32 +1,32 @@
-from fastapi import APIRouter, UploadFile, File, HTTPException
-from fastapi import Depends, Header, Query
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Header, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
-from fastapi.responses import FileResponse
-from fastapi import APIRouter
-from app.ocr.run import run
-from fastapi import UploadFile, File
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.db.session import get_db
-from pydantic import BaseModel
 from sqlalchemy.exc import IntegrityError
-from datetime import datetime, timedelta,date
-from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup, run_aadhaar_batch
-from typing import Dict, Any
-from fastapi.responses import StreamingResponse
+from datetime import datetime, timedelta, date
+from App.Ocr.Run import run
+from App.Db.Session import get_db
+from App.Jobs.RunAadhaarLookup import run_aadhaar_lookup, run_aadhaar_batch
+from typing import Dict, Any, List
 from openpyxl import Workbook
 from io import BytesIO
-from fastapi import BackgroundTasks
-from typing import List
-import threading, json
-import mimetypes, time
+import threading
+import json
+import mimetypes
+import time
 import os
 import uuid
-from app.utils.pdftopng import generate_preview_image
+from App.Utils.Pdftopng import generate_preview_image
 from pathlib import Path
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
 DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+NOW_EXPR = "datetime('now')" if DEV_MODE else "now()"
+_AUTH_TOKEN = os.getenv("AUTH_TOKEN", "")
 
 router = APIRouter(prefix="/api")
 
@@ -42,11 +42,11 @@ class SRDeclareRequest(BaseModel):
     sr_number: str
 
 def require_token(authorization: str = Header(None)):
-
     if DEV_MODE:
         return
-    if authorization != "Bearer fake-token-123":
-        print(authorization)
+    if not _AUTH_TOKEN:
+        raise HTTPException(status_code=500, detail="AUTH_TOKEN not configured on server")
+    if authorization != f"Bearer {_AUTH_TOKEN}":
         raise HTTPException(status_code=401, detail="Unauthorized")
 
 @router.get("/me")
@@ -218,10 +218,10 @@ def cleanup_expired_srs(
 ):
     try:
         result = db.execute(
-            text("""
+            text(f"""
                 DELETE FROM sr_registry
                 WHERE status = 'reserved'
-                AND expires_at < now()
+                AND expires_at < {NOW_EXPR}
             """)
         )
 
@@ -906,7 +906,7 @@ def rerun_tc_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+    from App.Jobs.RunTransferCertificateLookup import run_tc_lookup
     run_tc_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -917,7 +917,7 @@ def run_pending_tc_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_transfer_certificate_lookup import run_tc_batch
+    from App.Jobs.RunTransferCertificateLookup import run_tc_batch
 
     rows = db.execute(
         text("""
@@ -962,7 +962,7 @@ def rerun_marksheet_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.jobs.run_marksheet_lookup import run_marksheet_lookup
+    from App.Jobs.RunMarksheetLookup import run_marksheet_lookup
     run_marksheet_lookup(db, doc_id)
 
     return {"status": "ok"}
@@ -973,7 +973,7 @@ def run_pending_marksheet_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_marksheet_lookup import run_marksheet_batch
+    from App.Jobs.RunMarksheetLookup import run_marksheet_batch
 
     rows = db.execute(
         text("""
@@ -1018,7 +1018,7 @@ def rerun_bc_lookup(
             detail="Lookup already confirmed. Unconfirm before re-running."
         )
     
-    from app.jobs.run_bc_lookup import run_bc_lookup
+    from App.Jobs.RunBcLookup import run_bc_lookup
     run_bc_lookup(db, doc_id)
     return {1:1}
     
@@ -1028,7 +1028,7 @@ def run_pending_bc_lookups(
     db = Depends(get_db),
     _: str = Depends(require_token),
 ):
-    from app.jobs.run_bc_lookup import run_bc_batch
+    from App.Jobs.RunBcLookup import run_bc_batch
 
     rows = db.execute(
         text("""
@@ -1933,8 +1933,8 @@ def export_student_documents(
     CMP_BC_START = 35
     # ---- Fetch base SRs ----
     rows = db.execute(sql).fetchall()
-    from app.helper.excel_matching import compare
-    from app.helper.fill_cell_color import apply_cmp_color
+    from App.Helper.ExcelMatching import compare
+    from App.Helper.FillCellColor import apply_cmp_color
     for r in rows:
         row_values = [
             r.sr,
@@ -2039,12 +2039,39 @@ def export_student_documents(
 
 @router.post("/login")
 def login(data: LoginRequest):
-    if data.username == "admin" and data.password == "admin":
-        return {
-            "access_token": "fake-token-123",
-            "token_type": "bearer"
-        }
-    raise HTTPException(status_code=401, detail="Invalid credentials")
+    """
+    Authenticate the user against the ISMS ERP backend.
+    On success, return the NASSS-OCR service token (AUTH_TOKEN).
+    The frontend stores this token and sends it on every subsequent request.
+    """
+    import requests as _req
+
+    isms_base = os.getenv("ISMS_BASE_URL", "").rstrip("/")
+    auth_token = os.getenv("AUTH_TOKEN", "")
+
+    if DEV_MODE:
+        # Dev mode: accept any credentials
+        return {"access_token": auth_token or "dev-token", "token_type": "bearer"}
+
+    if not isms_base:
+        raise HTTPException(status_code=503, detail="ISMS ERP base URL not configured (ISMS_BASE_URL)")
+    if not auth_token:
+        raise HTTPException(status_code=503, detail="AUTH_TOKEN not configured on server")
+
+    try:
+        resp = _req.post(
+            f"{isms_base}/api/auth/login/",
+            json={"username": data.username, "password": data.password},
+            timeout=10,
+        )
+    except _req.RequestException:
+        raise HTTPException(status_code=503, detail="ISMS ERP is unreachable")
+
+    if resp.status_code not in (200, 201):
+        raise HTTPException(status_code=401, detail="Invalid ISMS ERP credentials")
+
+    # Valid ISMS ERP user → issue the NASSS-OCR service token
+    return {"access_token": auth_token, "token_type": "bearer"}
 
 @router.get("/health")
 def health_check():
@@ -2642,48 +2669,47 @@ def students_overview(
         "total": total,
     }
 
-@router.get("/amtech/status")
-def amtech_status(_: str = Depends(require_token)):
-    from app.integrations.amtech_runtime import ensure_amtech_connection
+@router.get("/isms/status")
+def isms_status(_: str = Depends(require_token)):
+    from App.Integrations.IsmsRuntime import ensure_isms_connection
 
-    state = ensure_amtech_connection()
+    state = ensure_isms_connection()
 
     return {
         "connected": state["connected"],
-        "user_id": state["user_id"],
-        "branches": state["branches"],
+        "user_id":   state["user_id"],
         "expires_at": state["expiry"],
-        "expires_in_seconds": int(state["expiry"] - time.time())
-    }  
+        "expires_in_seconds": int(state["expiry"] - time.time()),
+    }
 
-@router.post("/amtech/reconnect")
+@router.post("/isms/reconnect")
 def reconnect(_: str = Depends(require_token)):
-    from app.integrations.amtech_auth import authenticate
+    from App.Integrations.IsmsAuth import authenticate
     authenticate()
     return {"status": "reconnected"}
 
-@router.get("/amtech/masters")
-def get_amtech_masters(_: str = Depends(require_token)):
-    from app.integrations.amtech_masters import get_amtech_masters_internal
-    return get_amtech_masters_internal()
+@router.get("/isms/masters")
+def get_isms_masters(_: str = Depends(require_token)):
+    from App.Integrations.IsmsMasters import get_isms_masters_internal
+    return get_isms_masters_internal()
 
 # from fastapi import Body
-# @router.post("/amtech/dummy-post")
+# @router.post("/isms/dummy-post")
 # def dummy_post(confirm: bool = False, _: str = Depends(require_token),  body: dict = Body(default={})):
     import time
     import os
     from fastapi import HTTPException
-    from app.integrations.amtech_auth import load_token
-    from app.integrations.amtech_client import amtech_post
-    from app.integrations.amtech_masters import get_amtech_masters_internal
-    from app.integrations.build_admission_payload import build_dummy_admission_payload
+    from App.Integrations.IsmsAuth import load_token
+    from App.Integrations.IsmsClient import isms_post
+    from App.Integrations.IsmsMasters import get_isms_masters_internal
+    from App.Integrations.BuildAdmissionPayload import build_dummy_admission_payload
 
     # 🔐 Extra safety (recommended)
     if confirm and os.getenv("ALLOW_DUMMY_POST") != "true":
         raise HTTPException(403, "Dummy posting is disabled")
 
     # 1. Get masters snapshot
-    masters = get_amtech_masters_internal()
+    masters = get_isms_masters_internal()
 
     # 2. Build dummy payload
     payload = build_dummy_admission_payload(masters)
@@ -2696,33 +2722,33 @@ def get_amtech_masters(_: str = Depends(require_token)):
         }
 
     # 4. REAL POST (only if confirm=true)
-    token, _, _, _ = load_token()
+    token, _, _ = load_token()
 
-    response = amtech_post(
-        "/api/v1/sms/student",
+    response = isms_post(
+        os.getenv("ISMS_CREATE_STUDENT", "/api/students/"),
         token,
-        payload
+        payload,
     )
 
     return {
         "mode": "posted",
-        "response": response
+        "response": response,
     }
 
-@router.post("/amtech/{sr:path}/post")
-def post_admission_to_amtech(
+@router.post("/isms/{sr:path}/post")
+def post_admission_to_isms(
     sr: str,
     _: str = Depends(require_token),
     db: Session = Depends(get_db)
 ):
-    from app.integrations.amtech_auth import load_token
-    from app.db.post_admission import post_admission
-    from app.integrations.amtech_client import amtech_post
-    from app.integrations.build_admission_payload import build_amtech_admission_payload 
-    from app.integrations.amtech_masters import get_amtech_masters_internal
-    masters = get_amtech_masters_internal()
+    from App.Integrations.IsmsAuth import load_token
+    from App.Db.PostAdmission import post_admission
+    from App.Integrations.IsmsClient import isms_post
+    from App.Integrations.BuildAdmissionPayload import build_isms_admission_payload 
+    from App.Integrations.IsmsMasters import get_isms_masters_internal
+    masters = get_isms_masters_internal()
     payload = post_admission(sr,db)
-    post_payload = build_amtech_admission_payload(payload["data"], masters)
+    post_payload = build_isms_admission_payload(payload["data"], masters)
     
     # if not confirm:
     #     return {
@@ -2734,18 +2760,18 @@ def post_admission_to_amtech(
     #         "payload": post_payload
     #     }
 
-    # 4. REAL POST (only if confirm=true)
-    token, _, _, _ = load_token()
+    # 4. REAL POST to ISMS ERP
+    token, _, _ = load_token()
 
-    response = amtech_post(
-        os.getenv("AMTECH_CREATE_STUDENT"),
+    response = isms_post(
+        os.getenv("ISMS_CREATE_STUDENT", "/api/students/"),
         token,
-        post_payload
+        post_payload,
     )
 
     return {
         "mode": "posted",
-        "response": response
+        "response": response,
     }
     
 @router.post("/unlock/{pwd}/edit")

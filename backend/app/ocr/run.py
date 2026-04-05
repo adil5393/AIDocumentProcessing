@@ -1,24 +1,26 @@
 from sqlalchemy import text
-from app.db.session import SessionLocal
+from App.Db.Session import SessionLocal
 
-from app.ocr.google_ocr import process_file
-from app.ocr.extractor import extract_fields, normalize_from_raw
-from app.ocr.doc_classifier import detect_document_type
-from app.ocr.gpt_doc_classifier import gpt_detect_document_type
+from App.Ocr.GoogleOcr import process_file
+from App.Ocr.Extractor import extract_fields, normalize_from_raw
+from App.Ocr.DocClassifier import detect_document_type
+from App.Ocr.GptDocClassifier import gpt_detect_document_type
 
-from app.services.insert_admission_form import insert_admission_form
-from app.services.insert_aadhaar import insert_aadhaar
-from app.services.insert_transfer_certificate import insert_transfer_certificate
-from app.services.insert_marksheet import insert_marksheet
-from app.services.insert_birth_certificate import insert_birth_certificate
+from App.Services.InsertAdmissionForm import insert_admission_form
+from App.Services.InsertAadhaar import insert_aadhaar
+from App.Services.InsertTransferCertificate import insert_transfer_certificate
+from App.Services.InsertMarksheet import insert_marksheet
+from App.Services.InsertBirthCertificate import insert_birth_certificate
 
-from app.jobs.run_aadhaar_lookup import run_aadhaar_lookup
-from app.jobs.run_transfer_certificate_lookup import run_tc_lookup
+from App.Jobs.RunAadhaarLookup import run_aadhaar_lookup
+from App.Jobs.RunTransferCertificateLookup import run_tc_lookup
+from App.Jobs.RunMarksheetLookup import run_marksheet_lookup
+from App.Jobs.RunBcLookup import run_bc_lookup
 
-from app.helper.ensure_ressasses_dict import ensure_dict
-from app.utils.update_display_name import update_display_name
+from App.Helper.EnsureRessassesDict import ensure_dict
+from App.Utils.UpdateDisplayName import update_display_name
 
-from app.ocr.set_file_name import (
+from App.Ocr.SetFileName import (
     tc_display_name,
     aadhaar_display_name,
     admission_display_name,
@@ -29,6 +31,9 @@ from app.ocr.set_file_name import (
 import os
 import json
 
+DEV_MODE = os.getenv("DEV_MODE", "false").lower() == "true"
+NOW_EXPR = "datetime('now')" if DEV_MODE else "now()"
+
 UPLOAD_DIR = "uploads"
 
 
@@ -36,13 +41,22 @@ UPLOAD_DIR = "uploads"
 # ✅ Reset stuck jobs (worker crash recovery)
 # ==========================================================
 def reset_stuck_jobs(db):
-    db.execute(text("""
-        UPDATE uploaded_files
-        SET processing = false
-        WHERE processing = true
-          AND extraction_done = false
-          AND created_at < now() - interval '15 minutes'
-    """))
+    if os.getenv("DEV_MODE", "false").lower() == "true":
+        db.execute(text("""
+            UPDATE uploaded_files
+            SET processing = false
+            WHERE processing = true
+              AND extraction_done = false
+              AND created_at < datetime('now', '-15 minutes')
+        """))
+    else:
+        db.execute(text("""
+            UPDATE uploaded_files
+            SET processing = false
+            WHERE processing = true
+              AND extraction_done = false
+              AND created_at < now() - interval '15 minutes'
+        """))
     db.commit()
 
 
@@ -50,20 +64,35 @@ def reset_stuck_jobs(db):
 # ✅ Claim ONE file safely (Thread Safe Queue)
 # ==========================================================
 def claim_next_file(db):
-    file = db.execute(text("""
-        SELECT file_id, file_path, extracted_raw, display_name
-        FROM uploaded_files
-        WHERE extraction_done = false
-          AND processing = false
-          AND extraction_error IS NULL
-          AND (
-                display_name IS NULL
-             OR display_name NOT ILIKE '%PENDING_ADMISSION%'
-          )
-        ORDER BY created_at
-        LIMIT 1
-        FOR UPDATE SKIP LOCKED
-    """)).fetchone()
+    if os.getenv("DEV_MODE", "false").lower() == "true":
+        file = db.execute(text("""
+            SELECT file_id, file_path, extracted_raw, display_name
+            FROM uploaded_files
+            WHERE extraction_done = false
+              AND processing = false
+              AND extraction_error IS NULL
+              AND (
+                    display_name IS NULL
+                 OR LOWER(display_name) NOT LIKE '%pending_admission%'
+              )
+            ORDER BY created_at
+            LIMIT 1
+        """)).fetchone()
+    else:
+        file = db.execute(text("""
+            SELECT file_id, file_path, extracted_raw, display_name
+            FROM uploaded_files
+            WHERE extraction_done = false
+              AND processing = false
+              AND extraction_error IS NULL
+              AND (
+                    display_name IS NULL
+                 OR display_name NOT ILIKE '%PENDING_ADMISSION%'
+              )
+            ORDER BY created_at
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+        """)).fetchone()
 
     if not file:
         return None
@@ -103,11 +132,11 @@ def process_single_file(db, file_id, file_path, extracted_raw):
     if not row.ocr_done:
         ocr_text = process_file(full_path)
 
-        db.execute(text("""
+        db.execute(text(f"""
             UPDATE uploaded_files
             SET ocr_text = :ocr_text,
                 ocr_done = true,
-                ocr_at = now()
+                ocr_at = {NOW_EXPR}
             WHERE file_id = :file_id
         """), {
             "ocr_text": ocr_text,
@@ -185,12 +214,12 @@ def process_single_file(db, file_id, file_path, extracted_raw):
     elif doc_type == "marksheet":
         doc_id = insert_marksheet(db, file_id, structured)
         update_display_name(db, file_id, highschool_marksheet_display_name(structured))
-        run_tc_lookup(db, doc_id)
+        run_marksheet_lookup(db, doc_id)
 
     elif doc_type == "birth_certificate":
         doc_id = insert_birth_certificate(db, file_id, structured)
         update_display_name(db, file_id, birth_certificate_display_name(structured))
-        run_tc_lookup(db, doc_id)
+        run_bc_lookup(db, doc_id)
 
     return doc_type
 
@@ -224,11 +253,11 @@ def run():
                 doc_type = process_single_file(db, file_id, file_path, extracted_raw)
 
                 # ✅ Finalize success
-                db.execute(text("""
+                db.execute(text(f"""
                     UPDATE uploaded_files
                     SET doc_type = :doc_type,
                         extraction_done = true,
-                        extracted_at = now(),
+                        extracted_at = {NOW_EXPR},
                         extraction_error = NULL,
                         processing = false
                     WHERE file_id = :file_id

@@ -1,4 +1,4 @@
-import './tabgroup.css'
+import './Tabgroup.css'
 
 export type FileSubTab = "all" | "ocr_error" | "extraction_error";
 
